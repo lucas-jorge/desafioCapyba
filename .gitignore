@@ -58,7 +58,7 @@ coverage.xml
 local_settings.py
 db.sqlite3 # Ignora o banco de dados SQLite
 db.sqlite3-journal
-media/    # Ignora a pasta de uploads (a menos que você QUEIRA versionar alguns arquivos de mídia)
+media/
 static_root/
 staticfiles/
 
@@ -67,7 +67,7 @@ staticfiles/
 .venv
 env/
 venv/
-venv_capy/ # Ignora sua pasta de ambiente virtual específica
+venv_capy/
 ENV/
 env.bak/
 venv.bak/
