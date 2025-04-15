@@ -37,7 +37,8 @@ urlpatterns = [
     # Método: POST
     # Ação: Usuário logado altera a própria senha.
     #       Requer autenticação via Token.
-    path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
+    path('change-password/', views.ChangePasswordView.as_view(),
+         name='change-password'),
 
     # --- Confirmação de E-mail ---
 
@@ -45,15 +46,16 @@ urlpatterns = [
     # Método: POST
     # Ação: Solicita novo email de confirmação.
     #       Requer auth via Token. Usuário não confirmado.
-    path('email/request-confirmation/',
-         views.RequestConfirmationEmailView.as_view(),
-         name='request-confirmation-email'),
-    path(  # noqa: E501
-        'email/validate-confirmation/',  # noqa: E501
-        views.ValidateConfirmationView.as_view(),  # noqa: E501
-        name='validate-confirmation-email',  # noqa: E501
+    path(
+        'email/request-confirmation/',
+        views.RequestConfirmationEmailView.as_view(),
+        name='request-confirmation-email'
     ),
-
+    path(
+        'email/validate-confirmation/',
+        views.ValidateConfirmationView.as_view(),
+        name='validate-confirmation-email',
+    ),
 
     # --- Itens ---
 
@@ -62,9 +64,14 @@ urlpatterns = [
     # Ação: GET para listar itens públicos.
     #       POST para criar um novo item (requer autenticação).
     #       O 'owner' é associado automaticamente ao usuário do token.
-    path('items/public/', views.PublicItemListView.as_view(),
-         name='public-item-list'),
-     path('items/restricted/', views.RestrictedItemListView.as_view(), name='restricted-item-list'),
-
-
+    path(
+        'items/public/',
+        views.PublicItemListView.as_view(),
+        name='public-item-list'
+    ),
+    path(
+        'items/restricted/',
+        views.RestrictedItemListView.as_view(),
+        name='restricted-item-list'
+    ),
 ]

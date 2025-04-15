@@ -1,0 +1,52 @@
+[MASTER]
+# Add files or directories to the blacklist. They should be base names, not paths.
+ignore=migrations
+
+[MESSAGES CONTROL]
+# Disable specific messages (warnings, errors, etc.)
+disable=
+    # Django-specific disables
+    no-member,  # For Django model's objects attribute
+    missing-docstring,
+    too-few-public-methods,
+    too-many-ancestors,
+    invalid-name,
+    duplicate-code,
+    line-too-long,  # We use flake8 for this
+
+[TYPECHECK]
+# List of members which are set dynamically and missed by pylint inference system
+generated-members=
+    objects,  # For Django models
+    id,
+    pk,
+    DoesNotExist,
+    MultipleObjectsReturned,
+    _meta,
+    clean,
+    save,
+    delete
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+# Maximum number of locals for function / method body
+max-locals=15
+# Maximum number of return / yield for function / method body
+max-returns=6
+# Maximum number of branch for function / method body
+max-branches=12
+# Maximum number of statements in function / method body
+max-statements=50
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+# Maximum number of attributes for a class (see R0902).
+max-attributes=15
+# Minimum number of public methods for a class (see R0903).
+min-public-methods=0
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=20
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=100

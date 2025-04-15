@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 79
+exclude = 
+    .git,
+    __pycache__,
+    */migrations/*,
+    venv_capyba/,
+    .venv/,
+    env/,
+    venv/,
+    ENV/
+
+# Ignore specific errors in specific files
+per-file-ignores =
+    # Ignore line length errors in serializers.py
+    capy/serializers.py:E501
