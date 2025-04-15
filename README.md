@@ -58,3 +58,27 @@ Follow the steps below to set up the development environment:
     ```bash
     python manage.py migrate
     ```
+
+The API will be accessible on your local machine, usually at http://127.0.0.1:8000/. The API endpoints are available under the /api/ prefix (e.g., http://127.0.0.1:8000/api/register/).
+
+6.  **Populating with Seed Data (Optional)**
+    A command is available to populate the database with initial sample data (users and items) for testing purposes.
+    ```bash
+    python manage.py seed_db
+    ```
+    This command will create (if they don't exist):
+    * User: ```bash seeduser1@example.com ```(Password: ```bash SeedPass1!```), Email confirmed: Yes
+    * User: ```bash seeduser2@example.com ```(Password: ```bash SeedPass2@```), Email confirmed: No
+    * Several public and restricted items related to these users.
+
+## Running Tests
+
+To execute the automated tests and verify the API's integrity:
+
+```bash python manage.py test ```
+
+## API Documentation (Swagger)
+
+The API includes automatically generated interactive documentation. With the server running, access one of the following links in your browser:
+
+* Swagger UI: ```bash http://127.0.0.1:8000/swagger/ ```
