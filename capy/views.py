@@ -1,26 +1,34 @@
 # capy/views.py
 
-from rest_framework import generics, permissions, filters, status
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination  # Import pagination
-from django_filters.rest_framework import DjangoFilterBackend
-import uuid  # Para gerar tokens UUID
-from django.utils import timezone  # Para registrar o tempo
-from rest_framework.views import APIView
+import uuid
 from datetime import timedelta
 
+from django.utils import timezone
+from django.contrib.auth.models import AbstractBaseUser
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, filters, status, serializers
+from rest_framework.request import Request  # For type hinting request
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
+
+# Import Models
 from .models import CustomUser, Item
-from .serializers import (  # Formatted import
+
+# Import Serializers
+from .serializers import (
     UserSerializer,
     RegisterSerializer,
     ItemSerializer,
     ChangePasswordSerializer,
     ValidateConfirmationSerializer,
 )
+
+# Import Permissions
 from .permissions import IsEmailConfirmed
 
-# --- Autenticação e Usuário ---
 
+# --- Autenticação e Usuário ---
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -29,31 +37,22 @@ class RegisterView(generics.CreateAPIView):
     """
     queryset = CustomUser.objects.all()
     permission_classes = (permissions.AllowAny,)
-    # Serializer para validar ENTRADA e criar
     serializer_class = RegisterSerializer
 
-    # Sobrescrevendo o método 'create' para customizar a RESPOSTA
-    def create(self, request, *args, **kwargs):
-        # 1. Pega o serializer de ENTRADA (RegisterSerializer) com os dados
-        # da requisição
+    def create(self, request: Request, 
+               *args: tuple, **kwargs: dict) -> Response:
+        """
+        Cria um usuário e retorna seus dados via UserSerializer.
+        """
         serializer = self.get_serializer(data=request.data)
-        # 2. Valida os dados de entrada (ex: senhas batem, campos obrigatórios)
         serializer.is_valid(raise_exception=True)
-        # 3. Cria o usuário no banco. O método padrão perform_create chama
-        # serializer.save() e a instância criada fica disponível em
-        # serializer.instance
         self.perform_create(serializer)
-        # 4. Pega a instância do usuário que acabou de ser criado
-        user_instance = serializer.instance
-        # 5. Cria um NOVO serializer (UserSerializer) para formatar a SAÍDA
-        # (resposta). Passamos a instância do usuário criado para ele.
+        # Assume serializer.instance is set after perform_create
+        user_instance: CustomUser = serializer.instance
         response_serializer = UserSerializer(
             user_instance, context=self.get_serializer_context()
         )
-        # 6. Pega os cabeçalhos padrão de sucesso (ex: Location, se aplicável)
         headers = self.get_success_headers(response_serializer.data)
-        # 7. Retorna a Resposta HTTP 201 Created com os dados formatados
-        # pelo UserSerializer (que inclui 'id' e 'email_confirmed')
         return Response(
             response_serializer.data, status=status.HTTP_201_CREATED,
             headers=headers
@@ -61,136 +60,145 @@ class RegisterView(generics.CreateAPIView):
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
+    """
+    Endpoint para ver (GET) e atualizar (PUT/PATCH) o perfil do usuário autenticado.
+    """
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated,)  # Requer Token válido
 
-    def get_object(self):
+    def get_object(self) -> AbstractBaseUser:
+        """
+        Retorna o usuário autenticado associado à requisição.
+        """
+        # request.user can be User or AnonymousUser; IsAuthenticated ensures User
         return self.request.user
 
 
 # --- Itens ---
 
-
 class PublicItemListView(generics.ListCreateAPIView):
+    """
+    Endpoint para listar itens públicos (GET) e criar novos itens (POST).
+    GET é aberto, POST requer autenticação por Token.
+    Suporta paginação, busca, ordenação e filtragem.
+    """
     serializer_class = ItemSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    pagination_class = PageNumberPagination  # Explicitly set pagination
-    page_size_query_param = 'page_size'
-    # Definir o queryset base aqui é opcional se get_queryset for simples,
-    # mas podemos manter para clareza inicial.
+    pagination_class = PageNumberPagination
+    page_size_query_param = 'page_size'  # Permite override via ?page_size=X
     queryset = Item.objects.filter(is_public=True)
 
-    # Configuração dos filtros, busca e ordenação
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    # Deixe django-filter cuidar do filtro por owner e is_public
     filterset_fields = ['owner', 'is_public']
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
-    ordering = ['-created_at']
+    ordering = ['-created_at']  # Ordenação padrão
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: serializers.Serializer) -> None:
+        """
+        Associa o item sendo criado ao usuário autenticado.
+        """
         serializer.save(owner=self.request.user)
 
 
 # --- Change Password View ---
 
-
 class ChangePasswordView(generics.UpdateAPIView):
     """Endpoint para alterar a senha do usuário autenticado."""
     serializer_class = ChangePasswordSerializer
-    model = CustomUser  # Necessário para UpdateAPIView se não usar queryset
+    model = CustomUser
     permission_classes = (permissions.IsAuthenticated,)
 
-    def get_object(self, queryset=None):
-        # Garante que o objeto sendo "atualizado" é o próprio usuário logado
+    def get_object(self, queryset=None) -> AbstractBaseUser:
+        """
+        Retorna o usuário autenticado como o objeto a ser "atualizado".
+        """
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
-        # Define self.object como o usuário logado
+    def update(self, request: Request,
+               *args: tuple, **kwargs: dict) -> Response:
+        """
+        Lida com a requisição PUT/PATCH para alterar a senha.
+        """
         self.object = self.get_object()
-        # Pega o serializer com os dados da requisição
+        user: CustomUser = self.object  # Type hint for clarity
+
         serializer = self.get_serializer(data=request.data)
 
-        # Valida os dados do serializer (ex: new_password1 == new_password2)
-        if serializer.is_valid():
-            # Check old password - USANDO validated_data
-            if not self.object.check_password(
-                serializer.validated_data.get("old_password")  # <-- CORRIGIDO
-            ):
-                # Retorna erro se a senha antiga não bater
-                return Response(
-                    {"old_password": ["Senha antiga incorreta."]},
-                    status=status.HTTP_400_BAD_REQUEST
+        try:
+            serializer.is_valid(raise_exception=True)
+
+            old_password = serializer.validated_data.get("old_password")
+
+            # Validação Adicional: Verificar a Senha Antiga
+            if not user.check_password(old_password):
+                raise serializers.ValidationError(
+                    {"old_password": ["Senha antiga incorreta."]}
                 )
 
-            # Define a nova senha (hash automático) - USANDO validated_data
-            self.object.set_password(
-                serializer.validated_data.get("new_password1")  # <-- CORRIGIDO
+            # Define a nova senha (hash automático)
+            user.set_password(
+                serializer.validated_data.get("new_password1")
             )
-            self.object.save()
+            user.save()
 
             # Retorna resposta de sucesso
-            response = {
+            response_data = {
                 "status": "success",
                 "code": status.HTTP_200_OK,
                 "message": "Password updated successfully",
                 "data": [],
             }
-            return Response(response)
+            return Response(response_data)
 
-        # Retorna os erros de validação do serializer se is_valid() falhar
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except serializers.ValidationError:
+            # Re-raise para DRF tratar e retornar 400
+            raise
+        except Exception as e:
+            # Logar erro inesperado seria bom em produção
+            print(f"Erro inesperado em ChangePasswordView: {e}")
+            # Re-raise para retornar 500 Internal Server Error
+            raise
 
 
 # --- Views para Confirmação de E-mail ---
-
 
 class RequestConfirmationEmailView(APIView):
     """
     Endpoint para um usuário logado solicitar um novo token
     de confirmação de e-mail.
     """
-    # Só usuários logados podem solicitar
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        user = request.user
+    def post(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        """
+        Gera e salva um token de confirmação para o usuário. Simula envio.
+        """
+        user: CustomUser = request.user  # type: ignore
 
-        # 1. Verifica se o e-mail já está confirmado
         if user.email_confirmed:
             return Response(
                 {"message": "Seu e-mail já está confirmado."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 2. Gera um novo token UUID
         new_token = uuid.uuid4()
-
-        # 3. Atualiza o usuário com o novo token e a data/hora atual
         user.confirmation_token = new_token
         user.token_created_at = timezone.now()
-        # Otimização: salva só os campos alterados
         user.save(update_fields=['confirmation_token', 'token_created_at'])
 
-        # 4. Simula o envio de e-mail (etapa futura seria enviar de verdade)
-        # Por agora, apenas retornamos o token na resposta para testes.
+        # Simulação de envio (imprime no console)
         print(f"--- SIMULANDO ENVIO DE EMAIL para {user.email} ---")
         print(f"--- Token: {new_token} ---")
-        # Em um projeto real, aqui você chamaria uma função para enviar
-        # um e-mail contendo um link com este token.
-        # Ex: send_confirmation_email(user, new_token)
 
         return Response(
-            {
-                "message": "Token de confirmação gerado e 'enviado' "
-                           "(simulado). Verifique o console ou use o token "
-                           "abaixo para validar.",
-                "token": str(new_token)  # Retorna o token como string
-            },
+            {"message": "Token de confirmação gerado e 'enviado' (simulado). "
+                        "Verifique o console.",
+             "token": str(new_token)},
             status=status.HTTP_200_OK
         )
 
@@ -198,42 +206,42 @@ class RequestConfirmationEmailView(APIView):
 class ValidateConfirmationView(APIView):
     """
     Endpoint para validar o token de confirmação de e-mail
-    enviado pelo usuário.
+    enviado pelo usuário no corpo da requisição.
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        user = request.user
-
-        # 1. Validar se o token foi enviado no corpo da requisição
+    def post(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        """
+        Valida o token e confirma o email do usuário se válido e não expirado.
+        """
+        user: CustomUser = request.user  # type: ignore
         serializer = ValidateConfirmationSerializer(data=request.data)
+
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(serializer.errors, 
                             status=status.HTTP_400_BAD_REQUEST)
 
-        provided_token = serializer.validated_data['token']
+        provided_token: uuid.UUID = serializer.validated_data['token']
 
-        # 2. Verificar se o e-mail já está confirmado
         if user.email_confirmed:
-            # Ou 400, dependendo da preferência
             return Response(
                 {"message": "Este e-mail já foi confirmado anteriormente."},
                 status=status.HTTP_200_OK
             )
 
-        # 3. Verificar se existe um token pendente para este usuário
         if not user.confirmation_token or not user.token_created_at:
             return Response(
-                {"error": "Nenhum processo de confirmação pendente encontrado."
+                {"error": "Nenhum processo de confirmação pendente encontrado. "
                           "Solicite um novo token."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 4. (Opcional mas recomendado) Verificar expiração do token (ex: 24h)
+        # Verificar expiração (ex: 24 horas)
         expiration_duration = timedelta(hours=24)
         now = timezone.now()
-        if now > user.token_created_at + expiration_duration:
-            # Token expirou, limpar token antigo e pedir novo
+        is_expired = now > user.token_created_at + expiration_duration
+
+        if is_expired:
             user.confirmation_token = None
             user.token_created_at = None
             user.save(update_fields=['confirmation_token', 'token_created_at'])
@@ -243,24 +251,19 @@ class ValidateConfirmationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 5. Comparar o token fornecido com o token armazenado
-        #    Comparar como strings para evitar problemas entre UUID e string
+        # Comparar tokens
         if str(provided_token) == str(user.confirmation_token):
-            # Token VÁLIDO! Confirmar o e-mail e limpar os campos do token
             user.email_confirmed = True
             user.confirmation_token = None
             user.token_created_at = None
             user.save(
                 update_fields=[
-                    'email_confirmed', 'confirmation_token',
-                    'token_created_at'
+                    'email_confirmed', 'confirmation_token', 'token_created_at'
                 ]
             )
-
             return Response({"message": "E-mail confirmado com sucesso!"},
                             status=status.HTTP_200_OK)
         else:
-            # Token inválido
             return Response({"error": "Token de confirmação inválido."},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -271,20 +274,19 @@ class RestrictedItemListView(generics.ListAPIView):
     Acessível apenas por usuários autenticados E com e-mail confirmado.
     Suporta paginação, busca, ordenação e filtragem (igual à lista pública).
     """
-    serializer_class = ItemSerializer  # Mesmo serializer da lista pública
-
-    # Permissões: Precisa estar autenticado E ter email confirmado
+    serializer_class = ItemSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailConfirmed]
-
-    # Queryset base: Filtra apenas itens NÃO públicos
     queryset = Item.objects.filter(is_public=False)
 
+    # Reutiliza configurações da lista pública
+    pagination_class = PageNumberPagination
+    page_size_query_param = 'page_size'
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
         filters.OrderingFilter
     ]
-    filterset_fields = ['owner', 'is_public']  # Permite filtrar restritos
+    filterset_fields = ['owner', 'is_public']
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
-    ordering = ['-created_at']  # Ordenação padrão
+    ordering = ['-created_at']
