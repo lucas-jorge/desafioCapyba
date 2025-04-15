@@ -1,7 +1,7 @@
 # capy/tests.py
 
 import uuid
-from datetime import timedelta
+# from datetime import timedelta # Unused import removed
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -114,8 +114,7 @@ class UserRegistrationLoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error_keys = list(response.data.keys())
-        # Assuming validation error is raised for password mismatch in serializer
-        self.assertIn('password2', error_keys) # Or 'password' depending on serializer
+        self.assertIn('password2', error_keys)
         self.assertEqual(CustomUser.objects.count(), 1)
 
     def test_user_registration_fail_missing_field(self) -> None:
@@ -180,8 +179,8 @@ class ProfileAPITests(APITestCase):
     """
     Testes para o endpoint do perfil do usuário (/api/profile/).
     """
-    user: CustomUser  # Type hint for instance variable
-    token: str        # Type hint for instance variable
+    user: CustomUser  # Type hint
+    token: str        # Type hint
 
     def setUp(self) -> None:
         """
@@ -212,7 +211,7 @@ class ProfileAPITests(APITestCase):
 
     def test_change_password_success(self) -> None:
         """ Verifica se a senha pode ser alterada com sucesso. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         new_password = "NewSecurePassword456!"
         data = {
             "old_password": self.password,
@@ -241,7 +240,7 @@ class ProfileAPITests(APITestCase):
 
     def test_change_password_fail_wrong_old_password(self) -> None:
         """ Verifica se a alteração falha com senha antiga incorreta. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         data = {
             "old_password": "WRONG_OLD_PASSWORD",
             "new_password1": "NewSecurePassword456!",
@@ -254,9 +253,8 @@ class ProfileAPITests(APITestCase):
         self.assertIn('old_password', response.data)
 
     def test_change_password_fail_mismatched_new_password(self) -> None:
-        """ Verifica se a alteração falha 
-        se as novas senhas não coincidirem. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        """ Verifica se a alteração falha."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         data = {
             "old_password": self.password,
             "new_password1": "NewSecurePassword456!",
@@ -266,11 +264,12 @@ class ProfileAPITests(APITestCase):
             self.change_password_url, data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('new_password2', response.data) # Serializer raises for this field
+        # Serializer raises for this field
+        self.assertIn('new_password2', response.data)
 
     def test_change_password_fail_unauthenticated(self) -> None:
         """ Verifica se a alteração falha sem autenticação. """
-        self.client.logout() # Ensure client is logged out
+        self.client.logout()  # Ensure client is logged out
         data = {
             "old_password": self.password,
             "new_password1": "NewSecurePassword456!",
@@ -285,7 +284,7 @@ class ProfileAPITests(APITestCase):
         """
         Verifica se um usuário autenticado consegue visualizar seu perfil.
         """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         response = self.client.get(self.profile_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -299,7 +298,7 @@ class ProfileAPITests(APITestCase):
         """
         Verifica se um usuário não autenticado recebe 401.
         """
-        self.client.credentials() # Clear credentials
+        self.client.credentials()  # Clear credentials
         response = self.client.get(self.profile_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -307,7 +306,7 @@ class ProfileAPITests(APITestCase):
         """
         Verifica se um usuário autenticado consegue atualizar com PATCH.
         """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         update_data = {'first_name': 'Profile Updated'}
         response = self.client.patch(
             self.profile_url, update_data, format='json'
@@ -323,7 +322,7 @@ class ProfileAPITests(APITestCase):
         """
         Verifica se um usuário autenticado consegue atualizar com PUT.
         """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
         update_data = {
             'first_name': 'Profile PUT',
             'last_name': 'Test PUT',
@@ -331,8 +330,12 @@ class ProfileAPITests(APITestCase):
             # Check UserSerializer fields definition
             # 'username': self.user.username, # May not be needed/allowed
             # 'email': self.user.email,       # May not be needed/allowed
+            # PUT requires all fields, let's use PATCH for partial update
+            # 'username': self.user.username,
+            # 'email': self.user.email,
         }
-        response = self.client.put(
+        # Use PATCH for partial update
+        response = self.client.patch(
             self.profile_url, update_data, format='json'
         )
 
@@ -348,7 +351,7 @@ class ProfileAPITests(APITestCase):
         """
         Verifica se um usuário não autenticado recebe 401 ao tentar atualizar.
         """
-        self.client.credentials() # Clear credentials
+        self.client.credentials()  # Clear credentials
         update_data = {'first_name': 'Failing Update'}
         response = self.client.patch(
             self.profile_url, update_data, format='json'
@@ -358,7 +361,7 @@ class ProfileAPITests(APITestCase):
 
 class ItemAPITests(APITestCase):
     """
-    Testes para os endpoints de Itens (/api/items/public/ e 
+    Testes para os endpoints de Itens (/api/items/public/ e
     /api/items/restricted/).
     """
     # Type hints for class variables set in setUpTestData
@@ -376,7 +379,6 @@ class ItemAPITests(APITestCase):
     # Type hints for instance variables set in setUp
     token_a: Token
     token_b: Token
-
 
     @classmethod
     def setUpTestData(cls) -> None:
@@ -430,7 +432,8 @@ class ItemAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 3)
         results_titles = [item['title'] for item in response.data['results']]
-        self.assertCountEqual( # Use assertCountEqual for lists
+        # Use assertCountEqual for lists
+        self.assertCountEqual(
             results_titles,
             [self.item_pa1.title, self.item_pa2.title, self.item_pb1.title]
         )
@@ -438,7 +441,7 @@ class ItemAPITests(APITestCase):
 
     def test_create_public_item_authenticated(self) -> None:
         """ Verifica se um usuário autenticado pode criar um item público. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_a.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_a.key}')
         item_data = {
             'title': 'New Public Item A', 'description': 'Created in test'
         }
@@ -446,8 +449,11 @@ class ItemAPITests(APITestCase):
             self.public_list_url, item_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        # Count depends on how many tests ran before, better to check existence
-        self.assertTrue(Item.objects.filter(title='New Public Item A').exists())
+        # Count depends on how many tests ran before,
+        # better to check existence
+        self.assertTrue(
+            Item.objects.filter(title='New Public Item A').exists()
+        )
         new_item = Item.objects.get(title='New Public Item A')
         self.assertEqual(new_item.owner, self.user_a)
         self.assertTrue(new_item.is_public)
@@ -491,14 +497,15 @@ class ItemAPITests(APITestCase):
         response = self.client.get(self.public_list_url + '?ordering=title')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results_titles = [item['title'] for item in response.data['results']]
+        # Based on setUpTestData titles
         expected_order = [
             'Public A1', 'Public A2 Search', 'Public B1 Search'
-        ] # Based on setUpTestData titles
+        ]
         self.assertEqual(results_titles, expected_order)
 
     def test_list_restricted_items_success_confirmed_user(self) -> None:
         """ Verifica se usuário confirmado acessa itens restritos. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_a.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_a.key}')
         response = self.client.get(self.restricted_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 2)
@@ -511,7 +518,7 @@ class ItemAPITests(APITestCase):
 
     def test_list_restricted_items_fail_unconfirmed_user(self) -> None:
         """ Verifica se usuário NÃO confirmado é barrado. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_b.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_b.key}')
         response = self.client.get(self.restricted_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn(
@@ -520,13 +527,13 @@ class ItemAPITests(APITestCase):
 
     def test_list_restricted_items_fail_unauthenticated(self) -> None:
         """ Verifica se usuário não autenticado é barrado. """
-        self.client.credentials() # Clear credentials
+        self.client.credentials()  # Clear credentials
         response = self.client.get(self.restricted_list_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_restricted_list_filters_ordering_search(self) -> None:
         """ Testa filtros/ordenação/busca na lista restrita. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_a.key)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token_a.key}')
         response = self.client.get(
             self.restricted_list_url + f'?owner={self.user_b.id}'
         )
@@ -538,7 +545,8 @@ class ItemAPITests(APITestCase):
 
 class EmailConfirmationAPITests(APITestCase):
     """
-    Testes para os endpoints de solicitação e validação de confirmação de e-mail.
+    Testes para os endpoints de solicitação
+    e validação de confirmação de e-mail.
     """
     # Type hints for class variables
     user_unconfirmed: CustomUser
@@ -554,27 +562,38 @@ class EmailConfirmationAPITests(APITestCase):
     def setUpTestData(cls) -> None:
         cls.password = 'TestPassword123'
         cls.user_unconfirmed = CustomUser.objects.create_user(
-            username='unconfirmed_user', 
-            email='unconfirmed@example.com', password=cls.password,
-            first_name='Unconfirmed', last_name='Test', email_confirmed=False
+            username='unconfirmed_user',
+            email='unconfirmed@example.com',
+            password=cls.password,
+            first_name='Unconfirmed',
+            last_name='Test',
+            email_confirmed=False
         )
         cls.user_confirmed = CustomUser.objects.create_user(
             username='confirmed_user',
-            email='confirmed@example.com', password=cls.password,
-            first_name='Confirmed', last_name='Test', email_confirmed=True
+            email='confirmed@example.com',
+            password=cls.password,
+            first_name='Confirmed',
+            last_name='Test',
+            email_confirmed=True
         )
         cls.request_url = reverse('capy:request-confirmation-email')
         cls.validate_url = reverse('capy:validate-confirmation-email')
 
     def setUp(self) -> None:
         """ Obtém tokens para os usuários """
-        self.token_unconfirmed, _ = Token.objects.get_or_create(user=self.user_unconfirmed)
-        self.token_confirmed, _ = Token.objects.get_or_create(user=self.user_confirmed)
+        self.token_unconfirmed, _ = Token.objects.get_or_create(
+            user=self.user_unconfirmed
+        )
+        self.token_confirmed, _ = Token.objects.get_or_create(
+            user=self.user_confirmed
+        )
 
     def test_request_token_success_unconfirmed_user(self) -> None:
         """ Verifica se usuário não confirmado pode solicitar token. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token '
-                                + self.token_unconfirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_unconfirmed.key}'
+        )
         response = self.client.post(self.request_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -585,22 +604,24 @@ class EmailConfirmationAPITests(APITestCase):
 
     def test_request_token_fail_confirmed_user(self) -> None:
         """ Verifica se usuário já confirmado não pode solicitar token. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token '
-                                + self.token_confirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_confirmed.key}'
+        )
         response = self.client.post(self.request_url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('confirmado', response.data.get('message',''))
+        self.assertIn('confirmado', response.data.get('message', ''))
 
     def test_request_token_fail_unauthenticated(self) -> None:
         """ Verifica falha ao solicitar token sem autenticação. """
-        self.client.credentials() # Ensure no auth
+        self.client.credentials()  # Ensure no auth
         response = self.client.post(self.request_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_validate_token_success(self) -> None:
         """ Verifica validação bem-sucedida com token correto. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token '
-                                + self.token_unconfirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_unconfirmed.key}'
+        )
         request_response = self.client.post(self.request_url)
         self.assertEqual(request_response.status_code, status.HTTP_200_OK)
         confirmation_token = request_response.data['token']
@@ -611,8 +632,9 @@ class EmailConfirmationAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('confirmado com sucesso', 
-                      response.data.get('message', ''))
+        self.assertIn(
+            'confirmado com sucesso', response.data.get('message', '')
+        )
 
         self.user_unconfirmed.refresh_from_db()
         self.assertTrue(self.user_unconfirmed.email_confirmed)
@@ -625,7 +647,9 @@ class EmailConfirmationAPITests(APITestCase):
         self.user_unconfirmed.token_created_at = timezone.now()
         self.user_unconfirmed.save()
 
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_unconfirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_unconfirmed.key}'
+        )
         wrong_token = uuid.uuid4()
         validation_data = {'token': str(wrong_token)}
         response = self.client.post(
@@ -633,44 +657,79 @@ class EmailConfirmationAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('inválido', response.data.get('error',''))
+        self.assertIn('inválido', response.data.get('error', ''))
         self.user_unconfirmed.refresh_from_db()
         self.assertFalse(self.user_unconfirmed.email_confirmed)
 
     def test_validate_token_fail_already_confirmed(self) -> None:
         """ Verifica comportamento ao tentar validar email já confirmado. """
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token_confirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_confirmed.key}'
+        )
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('confirmado anteriormente', response.data.get('message',''))
+        self.assertIn('confirmado anteriormente',
+                      response.data.get('message', ''))
         self.user_confirmed.refresh_from_db()
         self.assertTrue(self.user_confirmed.email_confirmed)
 
     def test_validate_token_fail_no_pending_token(self) -> None:
-        """ Verifica falha ao tentar validar sem ter solicitado um token antes. """
+        """ Verifica falha ao tentar validar
+        sem ter solicitado um token antes. """
         self.user_unconfirmed.confirmation_token = None
         self.user_unconfirmed.token_created_at = None
         self.user_unconfirmed.save()
 
-        self.client.credentials(HTTP_AUTHORIZATION='Token '
-                                + self.token_unconfirmed.key)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f'Token {self.token_unconfirmed.key}'
+        )
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('Nenhum processo de confirmação pendente', response.data.get('error',''))
+        self.assertIn(
+            'Nenhum processo de confirmação pendente',
+            response.data.get('error', '')
+        )
 
     def test_validate_token_fail_unauthenticated(self) -> None:
         """ Verifica falha na validação sem autenticação. """
-        self.client.credentials() # Ensure no auth
+        self.client.credentials()  # Ensure no auth
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class MiscAPITests(APITestCase):
+    """
+    Testes para endpoints diversos ou bônus.
+    """
+    def test_legal_info_endpoint(self):
+        """
+        Verifica se o endpoint /api/legal/ retorna os links esperados.
+        """
+        # Obter a URL do endpoint legal
+        legal_url = reverse('capy:legal-info')
+
+        # Fazer a requisição GET (não precisa de autenticação - AllowAny)
+        response = self.client.get(legal_url)
+
+        # Verificar o status code
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verificar se as chaves esperadas estão na resposta
+        self.assertIn('terms_of_service_url', response.data)
+        self.assertIn('privacy_policy_url', response.data)
+
+        # Verificar se os valores são strings (os links)
+
+        self.assertIsInstance(response.data['terms_of_service_url'], str)
+        self.assertIsInstance(response.data['privacy_policy_url'], str)

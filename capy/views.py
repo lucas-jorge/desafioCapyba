@@ -39,7 +39,7 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
 
-    def create(self, request: Request, 
+    def create(self, request: Request,
                *args: tuple, **kwargs: dict) -> Response:
         """
         Cria um usuário e retorna seus dados via UserSerializer.
@@ -48,6 +48,7 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         # Assume serializer.instance is set after perform_create
+        assert isinstance(serializer.instance, CustomUser)
         user_instance: CustomUser = serializer.instance
         response_serializer = UserSerializer(
             user_instance, context=self.get_serializer_context()
@@ -61,16 +62,19 @@ class RegisterView(generics.CreateAPIView):
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
-    Endpoint para ver (GET) e atualizar (PUT/PATCH) o perfil do usuário autenticado.
+    Endpoint para ver (GET) e atualizar (PUT/PATCH) o perfil do usuário
+    autenticado.
     """
     serializer_class = UserSerializer
-    permission_classes = (permissions.IsAuthenticated,)  # Requer Token válido
+    # Requer Token válido
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self) -> AbstractBaseUser:
         """
         Retorna o usuário autenticado associado à requisição.
         """
-        # request.user can be User or AnonymousUser; IsAuthenticated ensures User
+        # IsAuthenticated ensures request.user is not AnonymousUser
+        assert isinstance(self.request.user, CustomUser)
         return self.request.user
 
 
@@ -98,7 +102,7 @@ class PublicItemListView(generics.ListCreateAPIView):
     ordering_fields = ['title', 'created_at']
     ordering = ['-created_at']  # Ordenação padrão
 
-    def perform_create(self, serializer: serializers.Serializer) -> None:
+    def perform_create(self, serializer: serializers.BaseSerializer) -> None:
         """
         Associa o item sendo criado ao usuário autenticado.
         """
@@ -113,10 +117,12 @@ class ChangePasswordView(generics.UpdateAPIView):
     model = CustomUser
     permission_classes = (permissions.IsAuthenticated,)
 
-    def get_object(self, queryset=None) -> AbstractBaseUser:
+    def get_object(self) -> AbstractBaseUser:  # Removed unused queryset=None
         """
         Retorna o usuário autenticado como o objeto a ser "atualizado".
         """
+        # IsAuthenticated ensures request.user is not AnonymousUser
+        assert isinstance(self.request.user, CustomUser)
         return self.request.user
 
     def update(self, request: Request,
@@ -124,45 +130,38 @@ class ChangePasswordView(generics.UpdateAPIView):
         """
         Lida com a requisição PUT/PATCH para alterar a senha.
         """
+        # pylint: disable=attribute-defined-outside-init
         self.object = self.get_object()
-        user: CustomUser = self.object  # Type hint for clarity
+        # Ensure self.object is CustomUser after get_object()
+        assert isinstance(self.object, CustomUser)
+        user: CustomUser = self.object
 
         serializer = self.get_serializer(data=request.data)
 
-        try:
-            serializer.is_valid(raise_exception=True)
+        serializer.is_valid(raise_exception=True)
 
-            old_password = serializer.validated_data.get("old_password")
+        old_password = serializer.validated_data.get("old_password")
 
-            # Validação Adicional: Verificar a Senha Antiga
-            if not user.check_password(old_password):
-                raise serializers.ValidationError(
-                    {"old_password": ["Senha antiga incorreta."]}
-                )
-
-            # Define a nova senha (hash automático)
-            user.set_password(
-                serializer.validated_data.get("new_password1")
+        # Validação Adicional: Verificar a Senha Antiga
+        if not user.check_password(old_password):
+            raise serializers.ValidationError(
+                {"old_password": ["Senha antiga incorreta."]}
             )
-            user.save()
 
-            # Retorna resposta de sucesso
-            response_data = {
-                "status": "success",
-                "code": status.HTTP_200_OK,
-                "message": "Password updated successfully",
-                "data": [],
-            }
-            return Response(response_data)
+        # Define a nova senha (hash automático)
+        user.set_password(
+            serializer.validated_data.get("new_password1")
+        )
+        user.save()
 
-        except serializers.ValidationError:
-            # Re-raise para DRF tratar e retornar 400
-            raise
-        except Exception as e:
-            # Logar erro inesperado seria bom em produção
-            print(f"Erro inesperado em ChangePasswordView: {e}")
-            # Re-raise para retornar 500 Internal Server Error
-            raise
+        # Retorna resposta de sucesso
+        response_data = {
+            "status": "success",
+            "code": status.HTTP_200_OK,
+            "message": "Password updated successfully",
+            "data": [],
+        }
+        return Response(response_data)
 
 
 # --- Views para Confirmação de E-mail ---
@@ -174,7 +173,8 @@ class RequestConfirmationEmailView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+    # Removed unused *args, **kwargs
+    def post(self, request: Request) -> Response:
         """
         Gera e salva um token de confirmação para o usuário. Simula envio.
         """
@@ -191,10 +191,6 @@ class RequestConfirmationEmailView(APIView):
         user.token_created_at = timezone.now()
         user.save(update_fields=['confirmation_token', 'token_created_at'])
 
-        # Simulação de envio (imprime no console)
-        print(f"--- SIMULANDO ENVIO DE EMAIL para {user.email} ---")
-        print(f"--- Token: {new_token} ---")
-
         return Response(
             {"message": "Token de confirmação gerado e 'enviado' (simulado). "
                         "Verifique o console.",
@@ -210,7 +206,8 @@ class ValidateConfirmationView(APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+    # Removed unused *args, **kwargs
+    def post(self, request: Request) -> Response:
         """
         Valida o token e confirma o email do usuário se válido e não expirado.
         """
@@ -218,7 +215,7 @@ class ValidateConfirmationView(APIView):
         serializer = ValidateConfirmationSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, 
+            return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
 
         provided_token: uuid.UUID = serializer.validated_data['token']
@@ -231,7 +228,7 @@ class ValidateConfirmationView(APIView):
 
         if not user.confirmation_token or not user.token_created_at:
             return Response(
-                {"error": "Nenhum processo de confirmação pendente encontrado. "
+                {"error": "Nenhum processo de confirmação pendente encontrado."
                           "Solicite um novo token."},
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -263,9 +260,9 @@ class ValidateConfirmationView(APIView):
             )
             return Response({"message": "E-mail confirmado com sucesso!"},
                             status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Token de confirmação inválido."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        # No need for else after return
+        return Response({"error": "Token de confirmação inválido."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 class RestrictedItemListView(generics.ListAPIView):
@@ -290,3 +287,27 @@ class RestrictedItemListView(generics.ListAPIView):
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
     ordering = ['-created_at']
+
+
+class LegalInfoView(APIView):
+    """
+    Endpoint público que retorna os links para os documentos de
+    Termos de Uso e Política de Privacidade.
+    """
+    # Permite acesso a qualquer pessoa, sem necessidade de autenticação
+    permission_classes = [permissions.AllowAny]
+
+    # Removed unused request and format arguments
+    def get(self, _request: Request, _format=None) -> Response:
+        """
+        Responde a requisições GET com os links pré-definidos.
+        """
+        # --- Substitua pelos links REAIS dos seus PDFs quando os tiver ---
+        terms_url = "https://bit.ly/42vUiep"
+        privacy_url = "http://bit.ly/3Epmx6G"
+
+        data = {
+            "terms_of_service_url": terms_url,
+            "privacy_policy_url": privacy_url
+        }
+        return Response(data, status=status.HTTP_200_OK)
