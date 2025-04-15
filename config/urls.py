@@ -36,8 +36,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Include the capy app URLs under /api/
-    path('api/', include('capy.urls')),
-    
+    path('api/', include('capy.urls')),  
     # --- URLs da Documentação drf-yasg ---
     # Endpoint para o schema JSON bruto
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', 
