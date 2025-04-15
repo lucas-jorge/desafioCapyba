@@ -74,4 +74,7 @@ urlpatterns = [
         views.RestrictedItemListView.as_view(),
         name='restricted-item-list'
     ),
+    path('legal/',
+         views.LegalInfoView.as_view(),
+         name='legal-info'),
 ]
