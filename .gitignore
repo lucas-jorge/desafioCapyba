@@ -71,6 +71,7 @@ venv_capy/
 ENV/
 env.bak/
 venv.bak/
+venv_capyba/
 
 # Spyder project settings
 .spyderproject
@@ -98,3 +99,8 @@ dmypy.json
 *.swp
 *.swo
 *~
+
+# OS generated files #
+######################
+.DS_Store
+Thumbs.db
