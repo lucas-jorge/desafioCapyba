@@ -107,6 +107,7 @@ class ItemSerializer(serializers.ModelSerializer):
 
 
 # Novo Serializer para Alteração de Senha
+# pylint: disable=abstract-method
 class ChangePasswordSerializer(serializers.Serializer):
     """
     Serializer para o processo de alteração de senha.
@@ -131,10 +132,10 @@ class ChangePasswordSerializer(serializers.Serializer):
         help_text='Confirme sua nova senha.'  # Ajuda para a documentação da API
     )
 
-    def validate(self, data):
+    def validate(self, attrs):  # Renamed data to attrs
 
         # 1. Verifica se a nova senha e a confirmação são iguais
-        if data['new_password1'] != data['new_password2']:
+        if attrs['new_password1'] != attrs['new_password2']:
             # O erro é associado ao campo 'new_password2' para clareza
             raise serializers.ValidationError(
                 {"new_password2": "As novas senhas não coincidem."}
@@ -145,7 +146,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         # Pega o usuário a partir do contexto passado pela View
         user = self.context['request'].user
         try:
-            django_validate_password(password=data['new_password1'], user=user)
+            # Use attrs here
+            django_validate_password(password=attrs['new_password1'], user=user)
         except DjangoValidationError as e:
             # Converte o erro de validação do Django para um erro do DRF
             raise serializers.ValidationError(
@@ -153,15 +155,16 @@ class ChangePasswordSerializer(serializers.Serializer):
             )
 
         # 3. (Opcional) Verifica se a nova senha é diferente da antiga
-        # if data['new_password1'] == data['old_password']:
+        # if attrs['new_password1'] == attrs['old_password']:
         #     raise serializers.ValidationError(
         #         {"new_password1": "A nova senha deve ser diferente da senha antiga."}
         #     )
 
-        return data
+        return attrs  # Return attrs
 
 
 # --- Novo Serializer para Validar Token de Confirmação ---
+# pylint: disable=abstract-method
 class ValidateConfirmationSerializer(serializers.Serializer):
     """
     Serializer simples para receber o token UUID enviado pelo usuário
