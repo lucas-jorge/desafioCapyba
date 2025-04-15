@@ -30,7 +30,7 @@ urlpatterns = [
     # Endpoint: /api/profile/
     # Métodos: GET, PUT, PATCH
     # Ação: GET para ver o perfil. PUT/PATCH para atualizar.
-    #       Requer autenticação via Token (Header: Authorization: Token <token>).
+    #       Requer autenticação via Token
     path('profile/', views.ProfileView.as_view(), name='profile'),
 
     # Endpoint: /api/change-password/
@@ -48,8 +48,11 @@ urlpatterns = [
     path('email/request-confirmation/',
          views.RequestConfirmationEmailView.as_view(),
          name='request-confirmation-email'),
-    
-     path('email/validate-confirmation/', views.ValidateConfirmationView.as_view(), name='validate-confirmation-email'),
+    path(  # noqa: E501
+        'email/validate-confirmation/',  # noqa: E501
+        views.ValidateConfirmationView.as_view(),  # noqa: E501
+        name='validate-confirmation-email',  # noqa: E501
+    ),
 
 
     # --- Itens ---
@@ -61,5 +64,7 @@ urlpatterns = [
     #       O 'owner' é associado automaticamente ao usuário do token.
     path('items/public/', views.PublicItemListView.as_view(),
          name='public-item-list'),
+     path('items/restricted/', views.RestrictedItemListView.as_view(), name='restricted-item-list'),
+
 
 ]
