@@ -51,8 +51,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     # Validação extra: verificar se as senhas coincidem
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
+            # Associate the error with 'password2' as expected by the test
             raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
+                {"password2": "Password fields didn't match."}
             )
         # (Opcional, mas recomendado) Validar se email/username já existem
         # aqui para dar feedback antes
