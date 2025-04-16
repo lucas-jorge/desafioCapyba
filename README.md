@@ -64,7 +64,7 @@ _(You can use a different name instead of `venv` if you prefer)_
 source venv/bin/activate
 ```
 
-    - On Windows (CMD/PowerShell):
+- On Windows (CMD/PowerShell):
 
 ```bash
 .\venv\Scripts\activate
