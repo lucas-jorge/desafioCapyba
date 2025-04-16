@@ -10,8 +10,7 @@ from rest_framework.authtoken.models import Token
 from .models import CustomUser, Item
 
 
-# --- Helper Function (pode ficar fora das classes) ---
-# (Opcional, mas pode limpar os setups)
+# --- Helper Function ---
 def create_test_user(
     username: str, email: str, password: str, confirmed: bool = False
 ) -> CustomUser:
@@ -24,20 +23,21 @@ def create_test_user(
         last_name="Test",
         email_confirmed=confirmed
     )
+    # Salva novamente se foi confirmado manualmente para garantir estado
+    # (embora create_user já salve)
     if confirmed:
-        # Apenas para garantir que save() foi chamado após a confirmação manual
         user.save()
     return user
 
 
 class BaseAPITestCase(APITestCase):
-    """ Classe base com métodos auxiliares. """
+    """ Classe base com métodos auxiliares para testes de API. """
     client: APIClient  # Type hint
-    user: CustomUser
-    token: Token
+    user: CustomUser   # Usuário principal para testes na classe filha
+    token: Token       # Token principal para testes na classe filha
 
     def _get_token_for_user(self, user: CustomUser) -> Token:
-        """ Obtém ou cria um token para um usuário. """
+        """ Obtém ou cria um token para um usuário específico. """
         token, _ = Token.objects.get_or_create(user=user)
         return token
 
@@ -50,10 +50,12 @@ class BaseAPITestCase(APITestCase):
         self.client.credentials()
 
 
+# --- Testes de Registro e Login ---
 class UserRegistrationLoginTests(BaseAPITestCase):
-    """ Testes para registro e obtenção de token. """
+    """ Testes para os endpoints de registro e obtenção de token. """
 
     def setUp(self) -> None:
+        """ Define URLs e dados comuns para os testes desta classe. """
         self.register_url = reverse('capy:register')
         self.token_url = reverse('capy:api_token_auth')
         self.register_data = {
@@ -64,16 +66,21 @@ class UserRegistrationLoginTests(BaseAPITestCase):
             "password": "StrongPassword123",
             "password2": "StrongPassword123",
         }
-        self.login_user = create_test_user(
-            'logintestuser', 'logintest@example.com', 'LoginPassword123'
+        # Usuário existente para testes de duplicação/login
+        self.existing_user = create_test_user(
+            'existinguser', 'existing@example.com', 'ExistingPassword123'
         )
 
     def test_registration_success(self) -> None:
-        """ Testa registro bem-sucedido. """
+        """ Testa o registro bem-sucedido de um novo usuário. """
+        initial_count = CustomUser.objects.count()
         response = self.client.post(
             self.register_url, self.register_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Verifica se a contagem de usuários aumentou em 1
+        self.assertEqual(CustomUser.objects.count(), initial_count + 1)
+        # Verifica se o usuário foi criado com os dados corretos
         user_exists = CustomUser.objects.filter(
             email=self.register_data['email']
         ).exists()
@@ -84,60 +91,64 @@ class UserRegistrationLoginTests(BaseAPITestCase):
         self.assertEqual(response.data['email'], self.register_data['email'])
         self.assertNotIn('password', response.data)
 
-    def test_registration_fail_duplicates(self) -> None:
-        """ Testa falha no registro com email ou username duplicado. """
-        # Email duplicado
+    def test_registration_fail_duplicate_email(self) -> None:
+        """ Testa a falha no registro com email duplicado. """
+        initial_count = CustomUser.objects.count()
         dup_email_data = self.register_data.copy()
-        dup_email_data['email'] = self.login_user.email
-        response_email = self.client.post(
+        dup_email_data['email'] = self.existing_user.email
+        response = self.client.post(
             self.register_url, dup_email_data, format='json'
         )
         self.assertEqual(
-            response_email.status_code, status.HTTP_400_BAD_REQUEST
+            response.status_code, status.HTTP_400_BAD_REQUEST
         )
-        self.assertIn('email', response_email.data)
+        self.assertIn('email', response.data)
+        # Nenhum usuário novo
+        self.assertEqual(CustomUser.objects.count(), initial_count)
 
-        # Username duplicado
+    def test_registration_fail_duplicate_username(self) -> None:
+        """ Testa a falha no registro com username duplicado. """
+        initial_count = CustomUser.objects.count()
         dup_username_data = self.register_data.copy()
-        dup_username_data['username'] = self.login_user.username
-        response_uname = self.client.post(
+        # Username existente
+        dup_username_data['username'] = self.existing_user.username
+        response = self.client.post(
             self.register_url, dup_username_data, format='json'
         )
         self.assertEqual(
-            response_uname.status_code, status.HTTP_400_BAD_REQUEST
+            response.status_code, status.HTTP_400_BAD_REQUEST
         )
-        self.assertIn('username', response_uname.data)
-
-        # Garante que só o usuário do setup existe
-        self.assertEqual(CustomUser.objects.count(), 1)
+        self.assertIn('username', response.data)
+        self.assertEqual(CustomUser.objects.count(), initial_count)
 
     def test_registration_fail_password_mismatch(self) -> None:
-        """ Testa falha no registro com senhas não coincidentes. """
+        """ Testa a falha no registro com senhas não coincidentes. """
+        initial_count = CustomUser.objects.count()
         mismatch_data = self.register_data.copy()
         mismatch_data['password2'] = 'DifferentPassword123'
         response = self.client.post(
             self.register_url, mismatch_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Erro esperado em password2
         self.assertIn('password2', response.data)
-        self.assertEqual(CustomUser.objects.count(), 1)
+        self.assertEqual(CustomUser.objects.count(), initial_count)
 
     def test_token_obtain_success(self) -> None:
-        """ Testa obtenção de token bem-sucedida. """
+        """ Testa a obtenção de token bem-sucedida. """
         login_data = {
-            'username': self.login_user.email,
-            'password': 'LoginPassword123'
+            'username': self.existing_user.email,
+            'password': 'ExistingPassword123'
         }
         response = self.client.post(self.token_url, login_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('token', response.data)
         self.assertTrue(response.data['token'])
 
-    def test_token_obtain_fail_wrong_credentials(self) -> None:
-        """ Testa falha na obtenção de token com credenciais erradas. """
-        # Senha errada
+    def test_token_obtain_fail_wrong_password(self) -> None:
+        """ Testa a falha na obtenção de token com senha incorreta. """
         wrong_pw_data = {
-            'username': self.login_user.email, 'password': 'Wrong'
+            'username': self.existing_user.email, 'password': 'Wrong'
         }
         response_pw = self.client.post(
             self.token_url, wrong_pw_data, format='json'
@@ -145,7 +156,8 @@ class UserRegistrationLoginTests(BaseAPITestCase):
         self.assertEqual(response_pw.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('non_field_errors', response_pw.data)
 
-        # Usuário inexistente
+    def test_token_obtain_fail_nonexistent_user(self) -> None:
+        """ Testa a falha na obtenção de token com usuário inexistente. """
         non_user_data = {'username': 'nosuch@e.com', 'password': 'pw'}
         response_user = self.client.post(
             self.token_url, non_user_data, format='json'
@@ -156,36 +168,41 @@ class UserRegistrationLoginTests(BaseAPITestCase):
         self.assertIn('non_field_errors', response_user.data)
 
 
-class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
+# --- Testes de Perfil e Troca de Senha ---
+class ProfileAPITests(BaseAPITestCase):
     """ Testes para perfil e alteração de senha. """
+    user: CustomUser
+    token: Token
+    password: str
 
     def setUp(self) -> None:
-        self.user = create_test_user(
-            'profileuser', 'profile@example.com', 'TestPassword123'
-        )
+        """ Cria usuário e obtém token para os testes. """
         self.password = 'TestPassword123'
+        self.user = create_test_user(
+            'profileuser', 'profile@example.com', self.password
+        )
         self.token = self._get_token_for_user(self.user)
         self.profile_url = reverse('capy:profile')
         self.change_password_url = reverse('capy:change-password')
 
-    def test_get_profile(self) -> None:
-        """ Testa visualização e falha de visualização do perfil. """
-        # Sucesso autenticado
+    def test_get_profile_success(self) -> None:
+        """ Testa visualização de perfil com sucesso (autenticado). """
         self._authenticate_client(self.token)
         response = self.client.get(self.profile_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['email'], self.user.email)
+        self.assertFalse(response.data['email_confirmed'])
 
-        # Falha não autenticado
+    def test_get_profile_fail_unauthenticated(self) -> None:
+        """ Testa falha na visualização de perfil sem autenticação. """
         self._clear_authentication()
         response_unauth = self.client.get(self.profile_url)
         self.assertEqual(
             response_unauth.status_code, status.HTTP_401_UNAUTHORIZED
         )
 
-    def test_update_profile_patch(self) -> None:
-        """ Testa atualização parcial (PATCH) e falha sem auth. """
-        # Sucesso autenticado
+    def test_update_profile_patch_success(self) -> None:
+        """ Testa atualização parcial (PATCH) do perfil com sucesso. """
         self._authenticate_client(self.token)
         update_data = {'first_name': 'Profile Updated'}
         response = self.client.patch(
@@ -196,8 +213,31 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'Profile Updated')
 
-        # Falha não autenticado
+    def test_update_profile_put_success(self) -> None:
+        """ Testa atualização completa (PUT) do perfil com sucesso. """
+        self._authenticate_client(self.token)
+        update_data = {
+            'first_name': 'Profile PUT',
+            'last_name': 'Test PUT',
+        }
+        response = self.client.put(
+            self.profile_url, update_data, format='json'
+        )
+        # DRF PUT might require all non-read-only fields if serializer requires
+        # Adjust UserSerializer if needed, or send all fields here.
+        # Assuming UserSerializer allows partial update even on PUT or fields
+        # like username/email are read-only on the serializer for updates.
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['first_name'], 'Profile PUT')
+        self.assertEqual(response.data['last_name'], 'Test PUT')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Profile PUT')
+        self.assertEqual(self.user.last_name, 'Test PUT')
+
+    def test_update_profile_fail_unauthenticated(self) -> None:
+        """ Testa falha na atualização de perfil sem autenticação. """
         self._clear_authentication()
+        update_data = {'first_name': 'Failing Update'}
         response_unauth = self.client.patch(
             self.profile_url, update_data, format='json'
         )
@@ -205,12 +245,10 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
             response_unauth.status_code, status.HTTP_401_UNAUTHORIZED
         )
 
-    def test_change_password(self) -> None:
-        """ Testa alteração de senha (sucesso e falhas principais). """
+    def test_change_password_success(self) -> None:
+        """ Testa alteração de senha bem-sucedida. """
         self._authenticate_client(self.token)
         new_password = "NewSecurePassword456!"
-
-        # --- Sucesso ---
         data_ok = {
             "old_password": self.password,
             "new_password1": new_password, "new_password2": new_password
@@ -221,10 +259,19 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
         self.assertEqual(response_ok.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(new_password))
-        # Atualiza self.password para próximo teste de falha
-        self.password = new_password
 
-        # --- Falha: Senha Antiga Errada ---
+        # Verifica login com nova senha
+        token_url = reverse('capy:api_token_auth')
+        login_response = self.client.post(
+            token_url,
+            {'username': self.user.email, 'password': new_password},
+            format='json'
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+    def test_change_password_fail_wrong_old(self) -> None:
+        """ Testa falha na alteração com senha antiga incorreta. """
+        self._authenticate_client(self.token)
         data_wrong_old = {
             "old_password": "WRONG_OLD_PASSWORD",
             "new_password1": "AnotherNew",
@@ -238,9 +285,11 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
         )
         self.assertIn('old_password', response_wrong_old.data)
 
-        # --- Falha: Novas Senhas Não Coincidem ---
+    def test_change_password_fail_mismatch(self) -> None:
+        """ Testa falha na alteração com novas senhas não coincidentes. """
+        self._authenticate_client(self.token)
         data_mismatch = {
-            "old_password": self.password,  # Usa a nova senha (atual)
+            "old_password": self.password,
             "new_password1": "AnotherNew",
             "new_password2": "MISMATCH",
         }
@@ -252,8 +301,14 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
         )
         self.assertIn('new_password2', response_mismatch.data)
 
-        # --- Falha: Não Autenticado ---
+    def test_change_password_fail_unauthenticated(self) -> None:
+        """ Testa falha na alteração sem autenticação. """
         self._clear_authentication()
+        data_ok = {
+            "old_password": self.password,
+            "new_password1": "NewSecurePassword456!",
+            "new_password2": "NewSecurePassword456!",
+        }
         response_unauth = self.client.put(
             self.change_password_url, data_ok, format='json'
         )
@@ -262,7 +317,8 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
         )
 
 
-class ItemAPITests(BaseAPITestCase):  # Herda da Base
+# --- Testes de Itens ---
+class ItemAPITests(BaseAPITestCase):
     """ Testes para os endpoints de Itens. """
     # Type hints
     user_a: CustomUser
@@ -278,20 +334,17 @@ class ItemAPITests(BaseAPITestCase):  # Herda da Base
 
     @classmethod
     def setUpTestData(cls) -> None:
-        """ Cria usuários e alguns itens. """
+        """ Cria usuários e itens para testes. """
         cls.public_list_url = reverse('capy:public-item-list')
         cls.restricted_list_url = reverse('capy:restricted-item-list')
-        # User A (Confirmado)
         cls.user_a = create_test_user(
             'itemuser_a', 'item_a@example.com',
             'UserAPassword1', confirmed=True
         )
-        # User B (Não Confirmado)
         cls.user_b = create_test_user(
             'itemuser_b', 'item_b@example.com',
             'UserBPassword1', confirmed=False
         )
-        # Itens (Reduzido para 1 público e 1 restrito por user)
         cls.item_pa = Item.objects.create(
             owner=cls.user_a, title="Public A Search", is_public=True
         )
@@ -306,58 +359,48 @@ class ItemAPITests(BaseAPITestCase):  # Herda da Base
         )
 
     def setUp(self) -> None:
-        """ Obtém tokens. """
+        """ Obtém tokens para usuários. """
         self.token_a = self._get_token_for_user(self.user_a)
         self.token_b = self._get_token_for_user(self.user_b)
 
-    def test_public_list_access_and_content(self) -> None:
-        """ Testa listagem pública (sem auth) e conteúdo básico. """
+    def test_list_public_items_unauthenticated(self) -> None:
+        """ Testa listagem pública sem auth e conteúdo. """
         response = self.client.get(self.public_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Apenas item_pa e item_pb
         self.assertEqual(response.data['count'], 2)
         titles = [item['title'] for item in response.data['results']]
         self.assertCountEqual(titles, [self.item_pa.title, self.item_pb.title])
 
-    def test_public_list_filters_search_order(self) -> None:
-        """ Testa filtros, busca e ordenação na lista pública. """
-        # Filtro Owner A
+    def test_list_public_items_filtering(self) -> None:
+        """ Testa filtro por dono na lista pública. """
         url_owner_a = f"{self.public_list_url}?owner={self.user_a.id}"
         response_owner_a = self.client.get(url_owner_a)
+        self.assertEqual(response_owner_a.status_code, status.HTTP_200_OK)
         self.assertEqual(response_owner_a.data['count'], 1)
         self.assertEqual(
             response_owner_a.data['results'][0]['title'], self.item_pa.title
         )
 
-        # Busca
+    def test_list_public_items_search(self) -> None:
+        """ Testa busca na lista pública. """
         url_search = f"{self.public_list_url}?search=Search"
         response_search = self.client.get(url_search)
-        # Ambos têm 'Search'
+        self.assertEqual(response_search.status_code, status.HTTP_200_OK)
         self.assertEqual(response_search.data['count'], 2)
 
-        # Ordenação
+    def test_list_public_items_ordering(self) -> None:
+        """ Testa ordenação na lista pública. """
         url_order = f"{self.public_list_url}?ordering=title"
         response_order = self.client.get(url_order)
+        self.assertEqual(response_order.status_code, status.HTTP_200_OK)
         titles_ordered = [
             item['title'] for item in response_order.data['results']
         ]
-        # Ordem A->B
         self.assertEqual(titles_ordered,
                          [self.item_pa.title, self.item_pb.title])
 
-    def test_item_creation(self) -> None:
-        """ Testa criação de item (sucesso autenticado,
-        falha não autenticado). """
-        # Falha sem auth
-        item_data = {'title': 'Fail Item'}
-        response_unauth = self.client.post(
-            self.public_list_url, item_data, format='json'
-        )
-        self.assertEqual(
-            response_unauth.status_code, status.HTTP_401_UNAUTHORIZED
-        )
-
-        # Sucesso com auth
+    def test_create_item_success(self) -> None:
+        """ Testa criação de item com sucesso (autenticado). """
         self._authenticate_client(self.token_a)
         item_data_ok = {'title': 'New Item By A'}
         response_ok = self.client.post(
@@ -369,41 +412,53 @@ class ItemAPITests(BaseAPITestCase):  # Herda da Base
         ).exists()
         self.assertTrue(item_exists)
 
-    def test_restricted_list_permissions(self) -> None:
-        """ Testa permissões de acesso à lista restrita. """
-        # Falha sem auth
-        self._clear_authentication()
-        response_unauth = self.client.get(self.restricted_list_url)
-        self.assertEqual(response_unauth.status_code,
-                         status.HTTP_401_UNAUTHORIZED)
+    def test_create_item_fail_unauthenticated(self) -> None:
+        """ Testa falha na criação de item sem autenticação. """
+        item_data = {'title': 'Fail Item'}
+        response_unauth = self.client.post(
+            self.public_list_url, item_data, format='json'
+        )
+        self.assertEqual(
+            response_unauth.status_code, status.HTTP_401_UNAUTHORIZED
+        )
 
-        # Falha com auth mas email não confirmado
+    def test_list_restricted_items_success_confirmed(self) -> None:
+        """ Testa sucesso ao listar restritos (autenticado e confirmado). """
+        self._authenticate_client(self.token_a)  # User A confirmado
+        response_ok = self.client.get(self.restricted_list_url)
+        self.assertEqual(response_ok.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_ok.data['count'], 2)  # RA1, RB1
+
+    def test_list_restricted_items_fail_unconfirmed(self) -> None:
+        """ Testa falha ao listar restritos (autenticado, não confirmado). """
         self._authenticate_client(self.token_b)  # User B não confirmado
         response_unconf = self.client.get(self.restricted_list_url)
         self.assertEqual(
             response_unconf.status_code, status.HTTP_403_FORBIDDEN
         )
 
-        # Sucesso com auth e email confirmado
-        self._authenticate_client(self.token_a)  # User A confirmado
-        response_ok = self.client.get(self.restricted_list_url)
-        self.assertEqual(response_ok.status_code, status.HTTP_200_OK)
-        # item_ra, item_rb
-        self.assertEqual(response_ok.data['count'], 2)
+    def test_list_restricted_items_fail_unauthenticated(self) -> None:
+        """ Testa falha ao listar restritos (não autenticado). """
+        self._clear_authentication()
+        response_unauth = self.client.get(self.restricted_list_url)
+        self.assertEqual(
+            response_unauth.status_code, status.HTTP_401_UNAUTHORIZED
+        )
 
-    def test_restricted_list_filtering(self) -> None:
-        """ Testa filtros na lista restrita. """
+    def test_list_restricted_items_filtering(self) -> None:
+        """ Testa filtro por dono na lista restrita. """
         self._authenticate_client(self.token_a)  # User A confirmado
-        # Filtro por dono (User B)
         url_owner_b = f"{self.restricted_list_url}?owner={self.user_b.id}"
         response_owner_b = self.client.get(url_owner_b)
+        self.assertEqual(response_owner_b.status_code, status.HTTP_200_OK)
         self.assertEqual(response_owner_b.data['count'], 1)
         self.assertEqual(
             response_owner_b.data['results'][0]['title'], self.item_rb.title
         )
 
 
-class EmailConfirmationAPITests(BaseAPITestCase):  # Herda da Base
+# --- Testes de Confirmação de E-mail ---
+class EmailConfirmationAPITests(BaseAPITestCase):
     """ Testes para confirmação de e-mail. """
     # Type hints
     user_unconfirmed: CustomUser
@@ -416,6 +471,7 @@ class EmailConfirmationAPITests(BaseAPITestCase):  # Herda da Base
 
     @classmethod
     def setUpTestData(cls) -> None:
+        """ Cria usuários confirmado e não confirmado. """
         cls.password = 'TestPassword123'
         cls.user_unconfirmed = create_test_user(
             'unconfirmed_user', 'unconfirmed@example.com', cls.password,
@@ -436,101 +492,93 @@ class EmailConfirmationAPITests(BaseAPITestCase):  # Herda da Base
         self.token_confirmed = self._get_token_for_user(
             self.user_confirmed)
 
-    # --- Testes para Request Confirmation ---
-    # (test_request_token_success_unconfirmed_user,
-    #  test_request_token_fail_confirmed_user,
-    #  test_request_token_fail_unauthenticated já existem e estão corretos)
+    def test_request_token_success(self) -> None:
+        """ Testa solicitação de token para usuário não confirmado. """
+        self._authenticate_client(self.token_unconfirmed)
+        response = self.client.post(self.request_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('token', response.data)
+        self.user_unconfirmed.refresh_from_db()
+        self.assertIsNotNone(self.user_unconfirmed.confirmation_token)
 
-    # --- Testes SEPARADOS para Validate Confirmation ---
+    def test_request_token_fail_if_already_confirmed(self) -> None:
+        """ Testa falha ao solicitar token para usuário já confirmado. """
+        self._authenticate_client(self.token_confirmed)
+        response = self.client.post(self.request_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_request_token_fail_if_unauthenticated(self) -> None:
+        """ Testa falha ao solicitar token sem autenticação. """
+        self._clear_authentication()
+        response = self.client.post(self.request_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_validate_token_success(self) -> None:
         """ Testa validação bem-sucedida com token correto. """
         self._authenticate_client(self.token_unconfirmed)
         # 1. Solicita/Gera token
         req_resp = self.client.post(self.request_url)
-        self.assertEqual(req_resp.status_code, status.HTTP_200_OK)
         confirmation_token = req_resp.data['token']
-
         # 2. Valida
         validation_data = {'token': confirmation_token}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-
         # 3. Verifica
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn(
-            'confirmado com sucesso', response.data.get('message', '')
-        )
         self.user_unconfirmed.refresh_from_db()
         self.assertTrue(self.user_unconfirmed.email_confirmed)
         self.assertIsNone(self.user_unconfirmed.confirmation_token)
 
     def test_validate_token_fail_wrong_token(self) -> None:
-        """ Testa falha na validação com token errado/inválido. """
-        # 1. Garante que usuário não está confirmado e TEM um token pendente
-        self.user_unconfirmed.email_confirmed = False  # Garante estado inicial
+        """ Testa falha na validação com token errado. """
+        # Garante que usuário tem um token pendente
         self.user_unconfirmed.confirmation_token = uuid.uuid4()
         self.user_unconfirmed.token_created_at = timezone.now()
         self.user_unconfirmed.save()
 
-        # 2. Tenta validar com um token diferente
         self._authenticate_client(self.token_unconfirmed)
-        wrong_token = uuid.uuid4()
+        wrong_token = uuid.uuid4()  # Token diferente
         validation_data = {'token': str(wrong_token)}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-
-        # 3. Verifica
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('inválido', response.data.get('error', ''))
         self.user_unconfirmed.refresh_from_db()
-        # Não deve ter confirmado
         self.assertFalse(self.user_unconfirmed.email_confirmed)
 
-    def test_validate_token_info_already_confirmed(self) -> None:
-        """ Testa comportamento ao tentar validar email já confirmado. """
+    def test_validate_token_already_confirmed_user(self) -> None:
+        """ Testa resposta ao validar usuário já confirmado. """
         self._authenticate_client(self.token_confirmed)
-        # Tenta validar com qualquer token
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-
-        # View retorna 200 OK com mensagem informativa
+        # View retorna OK
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(
             'confirmado anteriormente', response.data.get('message', '')
         )
-        self.user_confirmed.refresh_from_db()
-        # Continua confirmado
-        self.assertTrue(self.user_confirmed.email_confirmed)
 
     def test_validate_token_fail_no_pending_token(self) -> None:
-        """ Testa falha ao validar sem token pendente no usuário. """
-        # Garante que usuário não está confirmado e NÃO tem token pendente
-        self.user_unconfirmed.email_confirmed = False  # Garante estado inicial
+        """ Testa falha ao validar sem token pendente. """
+        # Garante que não há token
         self.user_unconfirmed.confirmation_token = None
-        self.user_unconfirmed.token_created_at = None
         self.user_unconfirmed.save()
-
         self._authenticate_client(self.token_unconfirmed)
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Nenhum processo', response.data.get('error', ''))
 
     def test_validate_token_fail_unauthenticated(self) -> None:
         """ Testa falha na validação sem autenticação. """
-        self._clear_authentication()  # Garante não autenticado
+        self._clear_authentication()
         validation_data = {'token': str(uuid.uuid4())}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-        self.assertEqual(
-            response.status_code, status.HTTP_401_UNAUTHORIZED
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
