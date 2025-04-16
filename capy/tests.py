@@ -214,22 +214,28 @@ class ProfileAPITests(BaseAPITestCase):
         self.assertEqual(self.user.first_name, 'Profile Updated')
 
     def test_update_profile_put_success(self) -> None:
-        """ Testa atualização completa (PUT) do perfil com sucesso. """
+        """
+        Verifica se um usuário autenticado consegue atualizar com PUT.
+        """
         self._authenticate_client(self.token)
+        # Dados para atualização completa:
+        # PUT exige (geralmente) todos os campos editáveis
         update_data = {
             'first_name': 'Profile PUT',
             'last_name': 'Test PUT',
+            'username': self.user.username,  # <-- Adicionar username atual
+            'email': self.user.email,       # <-- Adicionar email atual
+            # profile_image é opcional, não precisa incluir se não mudar
         }
         response = self.client.put(
             self.profile_url, update_data, format='json'
         )
-        # DRF PUT might require all non-read-only fields if serializer requires
-        # Adjust UserSerializer if needed, or send all fields here.
-        # Assuming UserSerializer allows partial update even on PUT or fields
-        # like username/email are read-only on the serializer for updates.
+
+        # O resto das asserções continua igual:
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['first_name'], 'Profile PUT')
         self.assertEqual(response.data['last_name'], 'Test PUT')
+
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'Profile PUT')
         self.assertEqual(self.user.last_name, 'Test PUT')
