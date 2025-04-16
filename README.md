@@ -173,6 +173,15 @@ The API includes automatically generated interactive documentation. With the ser
 
 In these interfaces, you can explore all endpoints, view request/response details, and even make test calls directly.
 
+**Important Note on Authentication in Swagger UI:**
+
+The default Django REST Framework login/logout buttons visible at the top of the Swagger UI **do not work** with the token-based authentication used in this API. To authenticate your requests within the documentation:
+
+1.  **Obtain a Token:** Use the `/api/api-token-auth/` endpoint (you can find it in the list below). Make a POST request with your `username` (which is your email) and `password`. Copy the `token` value from the response.
+2.  **Authorize:** Click the "Authorize" button (usually located near the top right, sometimes represented by a lock icon). In the dialog that appears, paste the token you copied into the `Value` field, prefixed with the word `Token` and a space (e.g., `Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b`). Click "Authorize" again in the dialog.
+
+Now your subsequent requests made through the Swagger UI will be authenticated.
+
 ## Deployment (Bonus Feature)
 
 This API is deployed on Render. You can access the live API at:
