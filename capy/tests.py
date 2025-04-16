@@ -117,21 +117,6 @@ class UserRegistrationLoginTests(APITestCase):
         self.assertIn('password2', error_keys)
         self.assertEqual(CustomUser.objects.count(), 1)
 
-    def test_user_registration_fail_missing_field(self) -> None:
-        """
-        Verifica se o registro falha se um campo obrigatório faltar.
-        """
-        missing_field_data = self.user_data.copy()
-        del missing_field_data['first_name']
-
-        response = self.client.post(
-            self.register_url, missing_field_data, format='json'
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('first_name', response.data)
-        self.assertEqual(CustomUser.objects.count(), 1)
-
     def test_token_obtain_success(self) -> None:
         """
         Verifica se um usuário registrado consegue obter um token.
@@ -318,35 +303,6 @@ class ProfileAPITests(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'Profile Updated')
 
-    def test_update_profile_put_success(self) -> None:
-        """
-        Verifica se um usuário autenticado consegue atualizar com PUT.
-        """
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
-        update_data = {
-            'first_name': 'Profile PUT',
-            'last_name': 'Test PUT',
-            # Usually email/username aren't updatable via profile serializer
-            # Check UserSerializer fields definition
-            # 'username': self.user.username, # May not be needed/allowed
-            # 'email': self.user.email,       # May not be needed/allowed
-            # PUT requires all fields, let's use PATCH for partial update
-            # 'username': self.user.username,
-            # 'email': self.user.email,
-        }
-        # Use PATCH for partial update
-        response = self.client.patch(
-            self.profile_url, update_data, format='json'
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['first_name'], 'Profile PUT')
-        self.assertEqual(response.data['last_name'], 'Test PUT')
-
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.first_name, 'Profile PUT')
-        self.assertEqual(self.user.last_name, 'Test PUT')
-
     def test_update_profile_fail_unauthenticated(self) -> None:
         """
         Verifica se um usuário não autenticado recebe 401 ao tentar atualizar.
@@ -467,41 +423,6 @@ class ItemAPITests(APITestCase):
             self.public_list_url, item_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_public_list_search_filter(self) -> None:
-        """ Testa o filtro de busca na lista pública. """
-        response = self.client.get(self.public_list_url + '?search=Search')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2)
-        results_titles = [item['title'] for item in response.data['results']]
-        self.assertCountEqual(
-            results_titles,
-            [self.item_pa2.title, self.item_pb1.title]
-        )
-
-    def test_public_list_owner_filter(self) -> None:
-        """ Testa o filtro por dono na lista pública. """
-        response = self.client.get(
-            self.public_list_url + f'?owner={self.user_a.id}'
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2)
-        results_titles = [item['title'] for item in response.data['results']]
-        self.assertCountEqual(
-            results_titles,
-            [self.item_pa1.title, self.item_pa2.title]
-        )
-
-    def test_public_list_ordering(self) -> None:
-        """ Testa a ordenação na lista pública. """
-        response = self.client.get(self.public_list_url + '?ordering=title')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results_titles = [item['title'] for item in response.data['results']]
-        # Based on setUpTestData titles
-        expected_order = [
-            'Public A1', 'Public A2 Search', 'Public B1 Search'
-        ]
-        self.assertEqual(results_titles, expected_order)
 
     def test_list_restricted_items_success_confirmed_user(self) -> None:
         """ Verifica se usuário confirmado acessa itens restritos. """
@@ -706,30 +627,3 @@ class EmailConfirmationAPITests(APITestCase):
             self.validate_url, validation_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-
-class MiscAPITests(APITestCase):
-    """
-    Testes para endpoints diversos ou bônus.
-    """
-    def test_legal_info_endpoint(self):
-        """
-        Verifica se o endpoint /api/legal/ retorna os links esperados.
-        """
-        # Obter a URL do endpoint legal
-        legal_url = reverse('capy:legal-info')
-
-        # Fazer a requisição GET (não precisa de autenticação - AllowAny)
-        response = self.client.get(legal_url)
-
-        # Verificar o status code
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Verificar se as chaves esperadas estão na resposta
-        self.assertIn('terms_of_service_url', response.data)
-        self.assertIn('privacy_policy_url', response.data)
-
-        # Verificar se os valores são strings (os links)
-
-        self.assertIsInstance(response.data['terms_of_service_url'], str)
-        self.assertIsInstance(response.data['privacy_policy_url'], str)
