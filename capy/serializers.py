@@ -1,14 +1,13 @@
 from rest_framework import serializers
-# Importar validação de senha do Django (opcional, mas recomendado)
+# Importar validação de senha
 from django.contrib.auth.password_validation import (
     validate_password as django_validate_password
 )
 from django.core.exceptions import ValidationError as DjangoValidationError
-
 from .models import CustomUser, Item
 
 
-# Esse serializer é usado para expor os dados do usuário na API
+# Serializer usado pra expor os dados do usuário na API
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
@@ -51,12 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     # Validação extra: verificar se as senhas coincidem
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
-            # Associate the error with 'password2' as expected by the test
+            # Associa o erro ao campo 'password2' para clareza
             raise serializers.ValidationError(
                 {"password2": "Password fields didn't match."}
             )
-        # (Opcional, mas recomendado) Validar se email/username já existem
-        # aqui para dar feedback antes
+        # (Opcional) Validar se email/username já existem
         if CustomUser.objects.filter(email=attrs['email']).exists():
             raise serializers.ValidationError(
                 {"email": "A user with that email already exists."}
@@ -67,11 +65,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             )
         return attrs
 
-    # Método chamado quando o serializer precisa criar um novo objeto (usuário)
+    # Método chamado quando o serializer precisa criar um novo objeto(usuário)
     def create(self, validated_data):
         # Remove o campo 'password2' que não vai para o banco
         validated_data.pop('password2')
-        # Pega a senha para tratar separadamente (hashing)
+        # Pega a senha para tratar separadamente(hashing)
         password = validated_data.pop('password')
         # Cria a instância do usuário com os dados validados restantes
         user = CustomUser(**validated_data)
@@ -117,7 +115,7 @@ class ChangePasswordSerializer(serializers.Serializer):
     """
     old_password = serializers.CharField(
         required=True,
-        write_only=True,  # Não queremos ler/expor a senha antiga
+        write_only=True,  # Não quero ler/expor a senha antiga
         style={'input_type': 'password'}
     )
     new_password1 = serializers.CharField(
@@ -133,7 +131,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         help_text='Confirme sua nova senha.'  # Ajuda para a documentação da API
     )
 
-    def validate(self, attrs):  # Renamed data to attrs
+    def validate(self, attrs):
 
         # 1. Verifica se a nova senha e a confirmação são iguais
         if attrs['new_password1'] != attrs['new_password2']:
@@ -142,26 +140,19 @@ class ChangePasswordSerializer(serializers.Serializer):
                 {"new_password2": "As novas senhas não coincidem."}
             )
 
-        # 2. (Opcional, mas recomendado) Valida a força da nova senha usando
+        # 2. Valida a força da nova senha usando
         # validadores do Django
         # Pega o usuário a partir do contexto passado pela View
         user = self.context['request'].user
         try:
-            # Use attrs here
+            # Usa attrs here
             django_validate_password(password=attrs['new_password1'], user=user)
         except DjangoValidationError as e:
             # Converte o erro de validação do Django para um erro do DRF
             raise serializers.ValidationError(
                 {"new_password1": list(e.messages)}
             )
-
-        # 3. (Opcional) Verifica se a nova senha é diferente da antiga
-        # if attrs['new_password1'] == attrs['old_password']:
-        #     raise serializers.ValidationError(
-        #         {"new_password1": "A nova senha deve ser diferente da senha antiga."}
-        #     )
-
-        return attrs  # Return attrs
+        return attrs  # Retorna attrs
 
 
 # --- Novo Serializer para Validar Token de Confirmação ---
