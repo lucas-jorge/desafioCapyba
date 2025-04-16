@@ -1,8 +1,22 @@
 # RESTful API - Capyba Challenge
 
-This is a RESTful API developed as part of the Capyba technical challenge for their selection process. The API implements features such as user registration, authentication (via Token), profile management, password change, email confirmation, restricted resource access based on email confirmation, and item listing/creation with advanced features like pagination, search, ordering, and filtering.
+This repository contains a RESTful API built with Django and Django REST Framework, developed for the Capyba selection process. It provides functionalities for user management, item handling, and various supporting features.
 
-It also includes automated tests, OpenAPI documentation, a database seeding command, Django Admin access, and an endpoint for legal documents.
+The API includes automated tests, OpenAPI documentation, a database seeding command, Django Admin access, and an endpoint for legal documents.
+
+## Features
+
+*   User Registration & Email Confirmation
+*   Token-based Authentication (Login/Logout)
+*   User Profile Management (View/Update, including profile picture)
+*   Password Change Functionality
+*   Item Management (CRUD operations for authenticated & confirmed users)
+*   Advanced Item Listing (Pagination, Search, Ordering, Filtering)
+*   Automated Tests (`pytest`)
+*   OpenAPI (Swagger/Redoc) Documentation (`drf-yasg`)
+*   Database Seeding Command
+*   Django Admin Interface Access
+*   Legal Information Endpoint
 
 ## Technologies Used
 
@@ -31,12 +45,12 @@ Follow the steps below to set up the development environment:
 1. **Clone the Repository:**
 
 ```bash
-git clone [https://github.com/lucas-jorge/desafioCapyba.git]
-cd project-folder-name
+git clone https://github.com/lucas-jorge/desafioCapyba.git
+cd desafioCapyba
 ```
 
 2. **Create a Virtual Environment:**
-It is highly recommended to use a virtual environment to isolate project dependencies.
+It is highly recommended to use a virtual environment to isolate project dependencies and avoid conflicts with other projects.
 
 ```bash
 python -m venv venv
@@ -79,9 +93,22 @@ After setup, you can start the Django development server:
 python manage.py runserver
 ```
 
-The API will be accessible on your local machine, usually at http://127.0.0.1:8000/. The API endpoints are available under the `/api/` prefix (e.g., http://127.0.0.1:8000/api/register/).
+The API will be accessible on your local machine, usually at http://127.0.0.1:8000/.
 
-## Populating with Seed Data (Optional Bonus)
+## API Endpoints Overview
+
+Here are some of the base URLs for the API:
+
+*   Authentication: `/api/auth/` (includes `/register/`, `/login/`, `/logout/`)
+*   Profile: `/api/profile/`
+*   Items: `/api/items/`
+*   Legal: `/api/legal/`
+*   API Docs (Swagger): `/swagger/`
+*   API Docs (Redoc): `/redoc/`
+
+Refer to the full OpenAPI documentation (linked below) for detailed endpoint information.
+
+## Populating with Seed Data (Bonus Feature)
 
 A command is available to populate the database with initial sample data (users and items) for testing purposes.
 
@@ -95,11 +122,11 @@ This command will create (if they don't exist):
 - User: seeduser2@example.com (Password: SeedPass2@), Email Confirmed: No
 - Several public and restricted items belonging to these users.
 
-The command is safe to run multiple times (it uses get_or_create).
+The command is safe to run multiple times (it uses `get_or_create`).
 
 ## Django Admin Interface (Bonus Feature)
 
-Basic Django Admin access is configured for managing CustomUser and Item models.
+Basic Django Admin access is configured for managing `CustomUser` and `Item` models.
 
 1. **Create a Superuser**: If you haven't already, create a superuser account to access the admin:
 
@@ -114,7 +141,7 @@ Log in using the superuser credentials you created.
 
 ## Legal Information Endpoint (Bonus Feature)
 
-An endpoint is available to retrieve links to the Terms of Service and Privacy Policy documents
+An endpoint is available to retrieve links to the Terms of Service and Privacy Policy documents:
 
 - **URL**: `/api/legal/`
 - **Method**: GET
@@ -143,11 +170,12 @@ In these interfaces, you can explore all endpoints, view request/response detail
 
 ## Project Structure
 
-- **config/**: Contains the main Django project settings (`settings.py`) and root URL configuration (`urls.py`).
-- **capy/**: The Django app containing the core API logic (models, views, serializers, app-specific URLs, tests, admin config, management commands, etc.).
-- **manage.py**: Django's command-line utility.
-- **requirements.txt**: List of Python dependencies.
-- **README.md**: This file.
-- **.gitignore**: Files and folders ignored by Git.
-- **db.sqlite3**: SQLite database file (created after migrate).
-- **media/**: Folder where profile images are saved (if MEDIA_ROOT is configured).
+- **config/**: Main Django project configuration (settings, root URLs, WSGI/ASGI).
+- **capy/**: The core application logic (models, views, serializers, API endpoints, tests, admin config, management commands, etc.).
+- **manage.py**: Django's command-line utility for tasks like running the server and migrations.
+- **requirements.txt**: List of Python dependencies required for the project.
+- **README.md**: This file, providing project documentation.
+- **.gitignore**: Specifies intentionally untracked files that Git should ignore.
+- **db.sqlite3**: The SQLite database file (created after running `migrate`).
+- **media/**: (If configured) Directory for user-uploaded files like profile pictures.
+- **venv/**: (Recommended) Folder containing the Python virtual environment.
