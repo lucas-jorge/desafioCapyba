@@ -58,7 +58,8 @@ python -m venv venv
 
 _(You can use a different name instead of `venv` if you prefer)_
 3. **Activate the Virtual Environment:**
-    - On Linux/macOS:
+
+- On Linux/macOS:
 
 ```bash
 source venv/bin/activate
