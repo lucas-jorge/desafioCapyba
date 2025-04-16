@@ -36,7 +36,7 @@ class BaseAPITestCase(APITestCase):
     user: CustomUser
     token: Token
 
-    def _get_token_for_user(self, user: CustomUser, password: str) -> Token:
+    def _get_token_for_user(self, user: CustomUser) -> Token:
         """ Obtém ou cria um token para um usuário. """
         token, _ = Token.objects.get_or_create(user=user)
         return token
@@ -164,7 +164,7 @@ class ProfileAPITests(BaseAPITestCase):  # Herda da Base para helpers
             'profileuser', 'profile@example.com', 'TestPassword123'
         )
         self.password = 'TestPassword123'
-        self.token = self._get_token_for_user(self.user, self.password)
+        self.token = self._get_token_for_user(self.user)
         self.profile_url = reverse('capy:profile')
         self.change_password_url = reverse('capy:change-password')
 
@@ -307,8 +307,8 @@ class ItemAPITests(BaseAPITestCase):  # Herda da Base
 
     def setUp(self) -> None:
         """ Obtém tokens. """
-        self.token_a = self._get_token_for_user(self.user_a, 'UserAPassword1')
-        self.token_b = self._get_token_for_user(self.user_b, 'UserBPassword1')
+        self.token_a = self._get_token_for_user(self.user_a)
+        self.token_b = self._get_token_for_user(self.user_b)
 
     def test_public_list_access_and_content(self) -> None:
         """ Testa listagem pública (sem auth) e conteúdo básico. """
@@ -431,10 +431,10 @@ class EmailConfirmationAPITests(BaseAPITestCase):  # Herda da Base
     def setUp(self) -> None:
         """ Obtém tokens. """
         self.token_unconfirmed = self._get_token_for_user(
-            self.user_unconfirmed, self.password
+            self.user_unconfirmed
         )
         self.token_confirmed = self._get_token_for_user(
-            self.user_confirmed, self.password)
+            self.user_confirmed)
 
     # --- Testes para Request Confirmation ---
     # (test_request_token_success_unconfirmed_user,
