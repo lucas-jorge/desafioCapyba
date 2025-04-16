@@ -23,7 +23,11 @@ The API includes automated tests, OpenAPI documentation, a database seeding comm
 - **Python** (3.10+)
 - **Django**
 - **Django REST Framework (DRF)**
-- **SQLite** (Default database)
+- **Database:** PostgreSQL (on Render), SQLite (local default)
+- **WSGI Server:** Gunicorn
+- **Static Files:** Whitenoise
+- **DB Connection:** dj-database-url
+- **PostgreSQL Driver:** psycopg2-binary
 - **django-filter** (For advanced API filtering)
 - **drf-yasg** (For OpenAPI/Swagger documentation generation)
 - **Pillow** (For image handling - profile picture)
@@ -169,6 +173,12 @@ The API includes automatically generated interactive documentation. With the ser
 
 In these interfaces, you can explore all endpoints, view request/response details, and even make test calls directly.
 
+## Deployment (Bonus Feature)
+
+This API is deployed on Render. You can access the live API at:
+
+- **Live API**: https://capyba-api.onrender.com
+
 ## Project Structure
 
 - **config/**: Main Django project configuration (settings, root URLs, WSGI/ASGI).
@@ -177,6 +187,8 @@ In these interfaces, you can explore all endpoints, view request/response detail
 - **requirements.txt**: List of Python dependencies required for the project.
 - **README.md**: This file, providing project documentation.
 - **.gitignore**: Specifies intentionally untracked files that Git should ignore.
+- **Procfile**: Declares process types for platforms like Render (e.g., web worker).
+- **staticfiles/**: Directory where static files are collected for production.
 - **db.sqlite3**: The SQLite database file (created after running `migrate`).
 - **media/**: (If configured) Directory for user-uploaded files like profile pictures.
 - **venv/**: (Recommended) Folder containing the Python virtual environment.
