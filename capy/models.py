@@ -5,7 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 
 
-# Criação do modelo de usuário personalizado
+# Criação do modelo de usuário personalizado do prório DRF!
 class CustomUser(AbstractUser):
     # Sobrescrever o email para ser único e obrigatório
     email = models.EmailField(unique=True)
@@ -33,6 +33,8 @@ class CustomUser(AbstractUser):
 
 class Item(models.Model):
     # Usar settings.AUTH_USER_MODEL para referenciar o modelo de usuário
+    # Lembrar!(Boa prática): usar o settings.AUTH_USER_MODEL para referenciar
+    # o modelo de usuário
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
