@@ -154,7 +154,7 @@ An endpoint is available to retrieve links to the Terms of Service and Privacy P
 - **Response**: JSON object containing `terms_of_service_url` and `privacy_policy_url`.
 
 
-## Running Tests
+## Running Tests 
 
 To execute the automated tests and verify the API's integrity:
 
