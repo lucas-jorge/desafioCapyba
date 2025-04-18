@@ -561,7 +561,7 @@ class EmailConfirmationAPITests(BaseAPITestCase):
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-        # View retorna OK
+        # View retorna
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(
             'confirmado anteriormente', response.data.get('message', '')
