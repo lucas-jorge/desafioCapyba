@@ -20,34 +20,34 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-# --- Configuração do drf-yasg ---
+# --- drf-yasg Configuration ---
 schema_view = get_schema_view(
    openapi.Info(
-      title="Capyba Challenge API",  # Título da sua API
-      default_version='v1',        # Versão da API
-      description="Documentação da API para o desafio técnico da Capyba.",
+      title="Capyba Challenge API",  # Your API Title
+      default_version='v1',        # API Version
+      description="API documentation for the Capyba technical challenge.",
       contact=openapi.Contact(email="lucasajorge@gmail.com"),
    ),
-   public=True,  # Torna o schema público (acessível sem login)
+   public=True,  # Makes the schema public (accessible without login)
    permission_classes=(permissions.AllowAny,),
 )
 # ---------------------------------
 
 urlpatterns = [
-    # Redireciona a URL raiz '/' para a documentação '/swagger/'
+    # Redirects the root URL '/' to the documentation '/swagger/'
     path('', RedirectView.as_view(url='/swagger/',
          permanent=False), name='index'),
     path('admin/', admin.site.urls),
     # Include the capy app URLs under /api/
     path('api/', include('capy.urls')),
-    # --- URLs da Documentação drf-yasg ---
-    # Endpoint para o schema JSON bruto
+    # --- drf-yasg Documentation URLs ---
+    # Endpoint for the raw JSON schema
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
             schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    # Endpoint para a interface Swagger UI interativa
+    # Endpoint for the interactive Swagger UI interface
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0),
          name='schema-swagger-ui'),
-    # Endpoint para a interface Redoc (alternativa/complementar)
+    # Endpoint for the Redoc interface (alternative/complementary)
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0),
          name='schema-redoc'),
     # --------------------------------------

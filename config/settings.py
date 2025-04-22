@@ -21,12 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = (
     'django-insecure-4c%g4o_j-93ffrs+o%#381vwa2ex&$j-e1b#e36u*=&**_h(!o'
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS_STRING = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost')
@@ -45,7 +43,7 @@ CSRF_TRUSTED_ORIGINS = (
     if CSRF_TRUSTED_ORIGINS_STRING else []
 )
 
-# Adiciona a URL do Render automaticamente se disponível
+# Automatically adds the Render URL if available
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
@@ -63,7 +61,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_filters',
     'drf_yasg',
-    # Meu app para esse projeto
+    # My app for the challenge
     'capy',
 ]
 
@@ -103,10 +101,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        # Usa a variável de ambiente DATABASE_URL se existir (no Render)
-        # Senão, usa SQLite localmente como fallback
+        # Use the DATABASE_URL environment variable if it exists (on Render)
+        # Otherwise, use local SQLite as a fallback
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600  # Opcional: tempo de vida da conexão
+        conn_max_age=600  # Optional: connection lifetime
     )
 }
 
@@ -172,7 +170,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-    # Adiciona o backend do django-filter como padrão para todas as views
+    # Adds the django-filter backend as default for all views
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
