@@ -32,8 +32,8 @@ from .permissions import IsEmailConfirmed
 
 class RegisterView(generics.CreateAPIView):
     """
-    Endpoint para registro de novos usuários. Aberto a todos.
-    Retorna os dados do usuário criado usando UserSerializer.
+    Endpoint for registering new users. Open to everyone.
+    Returns the created user's data using UserSerializer.
     """
     queryset = CustomUser.objects.all()
     permission_classes = (permissions.AllowAny,)
@@ -42,7 +42,7 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request: Request,
                *args: tuple, **kwargs: dict) -> Response:
         """
-        Cria um usuário e retorna seus dados via UserSerializer.
+        Creates a user and returns their data via UserSerializer.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -62,8 +62,8 @@ class RegisterView(generics.CreateAPIView):
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
-    Endpoint para ver (GET) e atualizar (PUT/PATCH) o perfil do usuário
-    autenticado.
+    Endpoint to view (GET) and update (PUT/PATCH) the authenticated
+    user's profile.
     """
     serializer_class = UserSerializer
     # Requires authentication
@@ -71,7 +71,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self) -> AbstractBaseUser:
         """
-        Retorna o usuário autenticado associado à requisição.
+        Returns the authenticated user associated with the request.
         """
         # IsAuthenticated ensures request.user is not AnonymousUser
         assert isinstance(self.request.user, CustomUser)
@@ -82,9 +82,9 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
 class PublicItemListView(generics.ListCreateAPIView):
     """
-    Endpoint para listar itens públicos (GET) e criar novos itens (POST).
-    GET é aberto, POST requer autenticação por Token.
-    Suporta paginação, busca, ordenação e filtragem.
+    Endpoint to list public items (GET) and create new items (POST).
+    GET is open, POST requires Token authentication.
+    Supports pagination, search, ordering, and filtering.
     """
     serializer_class = ItemSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
@@ -104,7 +104,7 @@ class PublicItemListView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer: serializers.BaseSerializer) -> None:
         """
-        Associa o item sendo criado ao usuário autenticado.
+        Associates the item being created with the authenticated user.
         """
         serializer.save(owner=self.request.user)
 
@@ -112,14 +112,14 @@ class PublicItemListView(generics.ListCreateAPIView):
 # --- Change Password View ---
 
 class ChangePasswordView(generics.UpdateAPIView):
-    """Endpoint para alterar a senha do usuário autenticado."""
+    """Endpoint to change the authenticated user's password."""
     serializer_class = ChangePasswordSerializer
     model = CustomUser
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self) -> AbstractBaseUser:  # Removed unused queryset=None
         """
-        Retorna o usuário autenticado como o objeto a ser "atualizado".
+        Returns the authenticated user as the object to be "updated".
         """
         # IsAuthenticated ensures request.user is not AnonymousUser
         assert isinstance(self.request.user, CustomUser)
@@ -128,7 +128,7 @@ class ChangePasswordView(generics.UpdateAPIView):
     def update(self, request: Request,
                *args: tuple, **kwargs: dict) -> Response:
         """
-        Lida com a requisição PUT/PATCH para alterar a senha.
+        Handles the PUT/PATCH request to change the password.
         """
         # pylint: disable=attribute-defined-outside-init
         self.object = self.get_object()
@@ -145,7 +145,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         # Additional validation for old password
         if not user.check_password(old_password):
             raise serializers.ValidationError(
-                {"old_password": ["Senha antiga incorreta."]}
+                {"old_password": ["Incorrect old password."]}
             )
 
         # Define new password
@@ -168,21 +168,21 @@ class ChangePasswordView(generics.UpdateAPIView):
 
 class RequestConfirmationEmailView(APIView):
     """
-    Endpoint para um usuário logado solicitar um novo token
-    de confirmação de e-mail.
+    Endpoint for a logged-in user to request a new email
+    confirmation token.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     # Removed unused *args, **kwargs
     def post(self, request: Request) -> Response:
         """
-        Gera e salva um token de confirmação para o usuário. Simula envio.
+        Generates and saves a confirmation token for the user. Simulates sending.
         """
         user: CustomUser = request.user  # type: ignore
 
         if user.email_confirmed:
             return Response(
-                {"message": "Seu e-mail já está confirmado."},
+                {"message": "Your email is already confirmed."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -192,8 +192,8 @@ class RequestConfirmationEmailView(APIView):
         user.save(update_fields=['confirmation_token', 'token_created_at'])
 
         return Response(
-            {"message": "Token de confirmação gerado e 'enviado' (simulado). "
-                        "Verifique o console.",
+            {"message": "Confirmation token generated and 'sent' (simulated). "
+                        "Check the console.",
              "token": str(new_token)},
             status=status.HTTP_200_OK
         )
@@ -201,15 +201,15 @@ class RequestConfirmationEmailView(APIView):
 
 class ValidateConfirmationView(APIView):
     """
-    Endpoint para validar o token de confirmação de e-mail
-    enviado pelo usuário no corpo da requisição.
+    Endpoint to validate the email confirmation token
+    sent by the user in the request body.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     # Removed unused *args, **kwargs
     def post(self, request: Request) -> Response:
         """
-        Valida o token e confirma o email do usuário se válido e não expirado.
+        Validates the token and confirms the user's email if valid and not expired.
         """
         user: CustomUser = request.user  # type: ignore
         serializer = ValidateConfirmationSerializer(data=request.data)
@@ -222,14 +222,14 @@ class ValidateConfirmationView(APIView):
 
         if user.email_confirmed:
             return Response(
-                {"message": "Este e-mail já foi confirmado anteriormente."},
+                {"message": "This email has already been confirmed previously."},
                 status=status.HTTP_200_OK
             )
 
         if not user.confirmation_token or not user.token_created_at:
             return Response(
-                {"error": "Nenhum processo de confirmação pendente encontrado."
-                          "Solicite um novo token."},
+                {"error": "No pending confirmation process found. "
+                          "Request a new token."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -243,8 +243,8 @@ class ValidateConfirmationView(APIView):
             user.token_created_at = None
             user.save(update_fields=['confirmation_token', 'token_created_at'])
             return Response(
-                {"error": "Token de confirmação expirado. "
-                          "Por favor, solicite um novo."},
+                {"error": "Confirmation token expired. "
+                          "Please request a new one."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -258,18 +258,18 @@ class ValidateConfirmationView(APIView):
                     'email_confirmed', 'confirmation_token', 'token_created_at'
                 ]
             )
-            return Response({"message": "E-mail confirmado com sucesso!"},
+            return Response({"message": "Email confirmed successfully!"},
                             status=status.HTTP_200_OK)
         # No need for else after return
-        return Response({"error": "Token de confirmação inválido."},
+        return Response({"error": "Invalid confirmation token."},
                         status=status.HTTP_400_BAD_REQUEST)
 
 
 class RestrictedItemListView(generics.ListAPIView):
     """
-    Endpoint para listar itens restritos (is_public=False).
-    Acessível apenas por usuários autenticados E com e-mail confirmado.
-    Suporta paginação, busca, ordenação e filtragem (igual à lista pública).
+    Endpoint to list restricted items (is_public=False).
+    Accessible only by authenticated users AND with confirmed email.
+    Supports pagination, search, ordering, and filtering (same as public list).
     """
     serializer_class = ItemSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailConfirmed]
@@ -291,8 +291,8 @@ class RestrictedItemListView(generics.ListAPIView):
 
 class LegalInfoView(APIView):
     """
-    Endpoint público que retorna os links para os documentos de
-    Termos de Uso e Política de Privacidade.
+    Public endpoint that returns links to the Terms of Use
+    and Privacy Policy documents.
     """
     # Allow any user to access this endpoint
     permission_classes = [permissions.AllowAny]
@@ -300,7 +300,7 @@ class LegalInfoView(APIView):
     # Removed unused request and format arguments
     def get(self, _request: Request, _format=None) -> Response:
         """
-        Responde a requisições GET com os links pré-definidos.
+        Responds to GET requests with predefined links.
         """
         # Links for Terms of Service and Privacy Policy
         terms_url = "https://bit.ly/42vUiep"

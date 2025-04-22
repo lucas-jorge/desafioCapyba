@@ -5,7 +5,7 @@ from django.urls import path
 # Import the default DRF view to obtain token
 from rest_framework.authtoken import views as authtoken_views
 
-from . import views  # Importa as views do nosso app 'capy'
+from . import views  # Import views from our 'capy' app
 
 # Defines a 'namespace' to avoid name conflicts between apps
 app_name = 'capy'

@@ -109,26 +109,26 @@ class ItemSerializer(serializers.ModelSerializer):
 # pylint: disable=abstract-method
 class ChangePasswordSerializer(serializers.Serializer):
     """
-    Serializer para o processo de alteração de senha.
+    Serializer for the password change process.
 
-    Requer a senha antiga e a nova senha (com confirmação).
+    Requires the old password and the new password (with confirmation).
     """
     old_password = serializers.CharField(
         required=True,
-        write_only=True,  # Não quero ler/expor a senha antiga
+        write_only=True,  # Don't want to read/expose the old password
         style={'input_type': 'password'}
     )
     new_password1 = serializers.CharField(
         required=True,
-        write_only=True,  # Não expor a nova senha
+        write_only=True,  # Don't expose the new password
         style={'input_type': 'password'},
-        help_text='Sua nova senha.'  # Ajuda para a documentação da API
+        help_text='Your new password.'  # Help text for API documentation
     )
     new_password2 = serializers.CharField(
         required=True,
-        write_only=True,  # Não expor a confirmação
+        write_only=True,  # Don't expose the confirmation
         style={'input_type': 'password'},
-        help_text='Confirme sua nova senha.'  # Ajuda para a documentação da API
+        help_text='Confirm your new password.'  # Help text for API documentation
     )
 
     def validate(self, attrs):
@@ -137,7 +137,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         if attrs['new_password1'] != attrs['new_password2']:
             # The error is associated with the 'new_password2' field for clarity
             raise serializers.ValidationError(
-                {"new_password2": "As novas senhas não coincidem."}
+                {"new_password2": "The new passwords do not match."}
             )
 
         # 2. Validates the strength of the new password using
@@ -159,10 +159,10 @@ class ChangePasswordSerializer(serializers.Serializer):
 # pylint: disable=abstract-method
 class ValidateConfirmationSerializer(serializers.Serializer):
     """
-    Serializer simples para receber o token UUID enviado pelo usuário
-    para validar o e-mail.
+    Simple serializer to receive the UUID token sent by the user
+    to validate the email.
     """
     token = serializers.UUIDField(
         required=True,
-        help_text="O token UUID recebido para confirmação."
+        help_text="The UUID token received for confirmation."
     )

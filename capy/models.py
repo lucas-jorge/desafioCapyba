@@ -14,14 +14,14 @@ class CustomUser(AbstractUser):
     )
     email_confirmed = models.BooleanField(default=False)
     confirmation_token = models.UUIDField(
-        null=True,  # permite valor nulo no banco
-        blank=True,  # permite campo em branco em forms/admin
-        editable=False  # não deve ser editável diretamente no admin
+        null=True,  # Allows null value in the database
+        blank=True,  # Allows blank field in forms/admin
+        editable=False  # Should not be directly editable in admin
     )
     token_created_at = models.DateTimeField(
-        null=True,  # Permite valor nulo
-        blank=True,  # Permite campo em branco
-        editable=False  # Não editável
+        null=True,  # Allows null value
+        blank=True,  # Allows blank field
+        editable=False  # Not editable
     )
 
     USERNAME_FIELD = 'email'
