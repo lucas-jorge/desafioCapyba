@@ -154,7 +154,12 @@ An endpoint is available to retrieve links to the Terms of Service and Privacy P
 - **Response**: JSON object containing `terms_of_service_url` and `privacy_policy_url`.
 
 
-## Running Tests 
+## Investigated Bonus (Not Included)
+
+*   **Google Login:** Integration of social login via Google OAuth 2.0 [source: 19] was investigated using the `django-allauth` and `dj-rest-auth` libraries. However, due to the complexity encountered in the final integration with the token-based API and challenges in ensuring robust end-to-end testing within the scope of the challenge, I chose to prioritize the delivery of the main features and other bonuses in a stable and well-tested manner. The exploration served as valuable learning about OAuth 2.0 flows.
+
+
+## Running Tests
 
 To execute the automated tests and verify the API's integrity:
 
