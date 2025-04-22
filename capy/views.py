@@ -222,14 +222,14 @@ class ValidateConfirmationView(APIView):
 
         if user.email_confirmed:
             return Response(
-                {"message": "This email has already been confirmed previously."},
+                {"message": "Este e-mail já foi confirmado anteriormente."},
                 status=status.HTTP_200_OK
             )
 
         if not user.confirmation_token or not user.token_created_at:
             return Response(
-                {"error": "No pending confirmation process found. "
-                          "Request a new token."},
+                {"error": "Nenhum processo de confirmação pendente encontrado. "
+                          "Solicite um novo token."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -261,7 +261,7 @@ class ValidateConfirmationView(APIView):
             return Response({"message": "Email confirmed successfully!"},
                             status=status.HTTP_200_OK)
         # No need for else after return
-        return Response({"error": "Invalid confirmation token."},
+        return Response({"error": "Token de confirmação inválido."},
                         status=status.HTTP_400_BAD_REQUEST)
 
 
