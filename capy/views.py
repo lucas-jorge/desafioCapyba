@@ -28,7 +28,7 @@ from .serializers import (
 from .permissions import IsEmailConfirmed
 
 
-# --- Autenticação e Usuário ---
+# Authentication and Registration Views
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -66,7 +66,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     autenticado.
     """
     serializer_class = UserSerializer
-    # Requer Token válido
+    # Requires authentication
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self) -> AbstractBaseUser:
@@ -78,7 +78,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
-# --- Itens ---
+# --- Items ---
 
 class PublicItemListView(generics.ListCreateAPIView):
     """
@@ -89,7 +89,7 @@ class PublicItemListView(generics.ListCreateAPIView):
     serializer_class = ItemSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     pagination_class = PageNumberPagination
-    page_size_query_param = 'page_size'  # Permite override via ?page_size=X
+    page_size_query_param = 'page_size'  # Allow custom page size
     queryset = Item.objects.filter(is_public=True)
 
     filter_backends = [
@@ -100,7 +100,7 @@ class PublicItemListView(generics.ListCreateAPIView):
     filterset_fields = ['owner', 'is_public']
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
-    ordering = ['-created_at']  # Ordenação padrão
+    ordering = ['-created_at']
 
     def perform_create(self, serializer: serializers.BaseSerializer) -> None:
         """
@@ -142,19 +142,19 @@ class ChangePasswordView(generics.UpdateAPIView):
 
         old_password = serializer.validated_data.get("old_password")
 
-        # Validação Adicional: Verificar a Senha Antiga
+        # Additional validation for old password
         if not user.check_password(old_password):
             raise serializers.ValidationError(
                 {"old_password": ["Senha antiga incorreta."]}
             )
 
-        # Define a nova senha (hash automático)
+        # Define new password
         user.set_password(
             serializer.validated_data.get("new_password1")
         )
         user.save()
 
-        # Retorna resposta de sucesso
+        # Return success response
         response_data = {
             "status": "success",
             "code": status.HTTP_200_OK,
@@ -164,7 +164,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         return Response(response_data)
 
 
-# --- Views para Confirmação de E-mail ---
+# --- Views for e-mail confirmation ---
 
 class RequestConfirmationEmailView(APIView):
     """
@@ -233,7 +233,7 @@ class ValidateConfirmationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Verificar expiração (ex: 24 horas)
+        # Verify token expiration
         expiration_duration = timedelta(hours=24)
         now = timezone.now()
         is_expired = now > user.token_created_at + expiration_duration
@@ -248,7 +248,7 @@ class ValidateConfirmationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Comparar tokens
+        # Compare tokens
         if str(provided_token) == str(user.confirmation_token):
             user.email_confirmed = True
             user.confirmation_token = None
@@ -275,7 +275,7 @@ class RestrictedItemListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsEmailConfirmed]
     queryset = Item.objects.filter(is_public=False)
 
-    # Reutiliza configurações da lista pública
+    # Reused pagination and filter settings from PublicItemListView
     pagination_class = PageNumberPagination
     page_size_query_param = 'page_size'
     filter_backends = [
@@ -294,7 +294,7 @@ class LegalInfoView(APIView):
     Endpoint público que retorna os links para os documentos de
     Termos de Uso e Política de Privacidade.
     """
-    # Permite acesso a qualquer pessoa, sem necessidade de autenticação
+    # Allow any user to access this endpoint
     permission_classes = [permissions.AllowAny]
 
     # Removed unused request and format arguments
@@ -302,7 +302,7 @@ class LegalInfoView(APIView):
         """
         Responde a requisições GET com os links pré-definidos.
         """
-        # --- Substitua pelos links REAIS dos seus PDFs quando os tiver ---
+        # Links for Terms of Service and Privacy Policy
         terms_url = "https://bit.ly/42vUiep"
         privacy_url = "http://bit.ly/3Epmx6G"
 

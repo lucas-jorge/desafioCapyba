@@ -5,9 +5,9 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 
 
-# Criação do modelo de usuário personalizado do prório DRF!
+# Creation of the custom user model from DRF itself!
 class CustomUser(AbstractUser):
-    # Sobrescrever o email para ser único e obrigatório
+    # Override email to be unique and required
     email = models.EmailField(unique=True)
     profile_image = models.ImageField(
         upload_to='profile_pics/', null=True, blank=True
@@ -32,9 +32,9 @@ class CustomUser(AbstractUser):
 
 
 class Item(models.Model):
-    # Usar settings.AUTH_USER_MODEL para referenciar o modelo de usuário
-    # Lembrar!(Boa prática): usar o settings.AUTH_USER_MODEL para referenciar
-    # o modelo de usuário
+    # Use settings.AUTH_USER_MODEL to reference the user model
+    # Remember!(Good practice): use settings.AUTH_USER_MODEL to reference
+    # the user model
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -42,10 +42,10 @@ class Item(models.Model):
     )
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    # se o item é público ou privado(requisito!)
+    # if the item is public or private (requirement!)
     is_public = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # opcional pra debugging
+    # optional for debugging
     def __str__(self) -> str:
         return str(self.title)

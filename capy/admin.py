@@ -4,23 +4,23 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Item
 
-# Para customizar como o CustomUser aparece no Admin
+# To customize how CustomUser appears in the Admin
 
 
 class CustomUserAdmin(UserAdmin):
-    # Mantém a maioria das configurações do UserAdmin padrão
-    # Adiciona nossos campos customizados aos fieldsets
-    # Copiamos os fieldsets padrão e adicionamos os nossos
-    # Garantir que fieldsets não seja None e converter para lista
+    # Keeps most of the default UserAdmin settings
+    # Adds our custom fields to the fieldsets
+    # We copy the default fieldsets and add ours
+    # Ensure fieldsets is not None and convert to list
     _fieldsets = list(UserAdmin.fieldsets or ())
     _fieldsets.append(
-        # Adiciona uma nova seção chamada 'Campos Customizados'
+        # Adds a new section called 'Custom Fields'
         ('Campos Customizados',
          {'fields': ('profile_image', 'email_confirmed')})
     )
     fieldsets = _fieldsets
-    # Adiciona os campos customizados ao formulário de criação de usuário
-    # Garantir que add_fieldsets não seja None e converter para lista
+    # Adds the custom fields to the user creation form
+    # Ensure add_fieldsets is not None and convert to list
     _add_fieldsets = list(UserAdmin.add_fieldsets or ())
     _add_fieldsets.append(
         ('Campos Customizados',
@@ -28,44 +28,44 @@ class CustomUserAdmin(UserAdmin):
     )
     add_fieldsets = _add_fieldsets
 
-    # Adiciona colunas extras na listagem de usuários no admin
+    # Adds extra columns to the user list in the admin
     list_display = (
         'email', 'username', 'first_name', 'last_name', 'is_staff',
         'email_confirmed'
     )
-    # Adiciona 'email_confirmed' aos filtros laterais
-    # Garantir que list_filter não seja None e converter para lista
+    # Adds 'email_confirmed' to the side filters
+    # Ensure list_filter is not None and convert to list
     _list_filter = list(UserAdmin.list_filter or ())
     _list_filter.append('email_confirmed')
     # Convert back to tuple if needed, or keep as list
     list_filter = tuple(_list_filter)
-    # Permite buscar por campos customizados (padrões já incluem email, etc.)
-    # Garantir que search_fields não seja None
-    # Não adicionar campos existentes
+    # Allows searching by custom fields (defaults already include email, etc.)
+    # Ensure search_fields is not None
+    # Do not add existing fields
     search_fields = UserAdmin.search_fields or ()
 
 
-# Registra o modelo Item no Admin (com configuração padrão)
+# Registers the Item model in the Admin (with default configuration)
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    # Mostra estes campos na listagem de itens
+    # Shows these fields in the item list
     list_display = ('title', 'owner_email_display', 'is_public', 'created_at')
-    # Adiciona filtros laterais
+    # Adds side filters
     list_filter = ('is_public', 'owner', 'created_at')
-    # Permite buscar por título, descrição e dados do dono
+    # Allows searching by title, description, and owner data
     search_fields = (
         'title', 'description', 'owner__email', 'owner__username'
     )
-    # Define campos que são apenas para leitura no formulário de edição
+    # Defines fields that are read-only in the edit form
     readonly_fields = ('created_at',)
 
-    # Método para exibir o email do dono na listagem de forma amigável
+    # Method to display the owner's email in the list in a friendly way
     def owner_email_display(self, obj):
         return obj.owner.email
-    # Nome da coluna
+    # Column name
     owner_email_display.short_description = 'Owner Email'  # type: ignore
 
-# Registra o CustomUser usando a classe de admin customizada
+# Registers CustomUser using the custom admin class
 
 
 admin.site.register(CustomUser, CustomUserAdmin)

@@ -46,8 +46,8 @@ class Command(BaseCommand):
             'Iniciando o processo de seed...'
         ))
 
-        # --- Verifica/Cria Usuários ---
-        self.stdout.write('Criando/Verificando Usuários...')
+        # --- Check/Create Users ---
+        self.stdout.write('Creating/Checking Users...')
 
         user1_defaults = {
             'username': 'seeduser1',
@@ -71,8 +71,8 @@ class Command(BaseCommand):
             'seeduser2@example.com', user2_defaults, 'SeedPass2@'
         )
 
-        # --- Verifica/Cria Itens ---
-        self.stdout.write('Criando/Verificando Itens...')
+        # --- Check/Create Items ---
+        self.stdout.write('Creating/Checking Items...')
 
         self._create_or_get_item(
             title='Item Público Seed 1 (User 1)',

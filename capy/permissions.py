@@ -8,8 +8,8 @@ class IsEmailConfirmed(permissions.BasePermission):
     Permissão customizada que permite acesso apenas a usuários autenticados
     E que tenham confirmado seu endereço de e-mail.
     """
-    # Mensagem que será retornada se a permissão for negada
-    message = 'Seu endereço de e-mail precisa ser confirmado.'
+    # Message returned if permission is denied
+    message = 'Your email address needs to be confirmed.'
 
     def has_permission(self, request, view):
         """

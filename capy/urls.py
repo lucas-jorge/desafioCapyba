@@ -1,51 +1,51 @@
 # capy/urls.py
 
-# Importações necessárias do Django e DRF
+# Necessary imports from Django and DRF
 from django.urls import path
-# Importa a view padrão do DRF para obter token
+# Import the default DRF view to obtain token
 from rest_framework.authtoken import views as authtoken_views
 
 from . import views  # Importa as views do nosso app 'capy'
 
-# Define um 'namespace' para evitar conflito de nomes entre apps
+# Defines a 'namespace' to avoid name conflicts between apps
 app_name = 'capy'
 
-# Lista de padrões de URL (endpoints) para a API do app 'capy'
+# List of URL patterns (endpoints) for the 'capy' app API
 urlpatterns = [
 
-    # --- Autenticação e Gerenciamento de Usuário ---
+    # --- Authentication and User Management ---
 
     # Endpoint: /api/register/
-    # Método: POST
-    # Ação: Cria um novo usuário. Aberto para qualquer um.
+    # Method: POST
+    # Action: Creates a new user. Open to anyone.
     path('register/', views.RegisterView.as_view(), name='register'),
 
     # Endpoint: /api/api-token-auth/
-    # Método: POST
-    # Ação: Recebe 'username' (email) e 'password', retorna o token.
-    #       Este é o endpoint de "login" para a API baseada em token.
+    # Method: POST
+    # Action: Receives 'username' (email) and 'password', returns the token.
+    #       This is the "login" endpoint for the token-based API.
     path('api-token-auth/', authtoken_views.obtain_auth_token,
          name='api_token_auth'),
 
     # Endpoint: /api/profile/
-    # Métodos: GET, PUT, PATCH
-    # Ação: GET para ver o perfil. PUT/PATCH para atualizar.
-    #       Requer autenticação via Token
+    # Methods: GET, PUT, PATCH
+    # Action: GET to view profile. PUT/PATCH to update.
+    #       Requires authentication via Token
     path('profile/', views.ProfileView.as_view(), name='profile'),
 
     # Endpoint: /api/change-password/
-    # Método: POST
-    # Ação: Usuário logado altera a própria senha.
-    #       Requer autenticação via Token.
+    # Method: POST
+    # Action: Logged-in user changes their own password.
+    #       Requires authentication via Token.
     path('change-password/', views.ChangePasswordView.as_view(),
          name='change-password'),
 
-    # --- Confirmação de E-mail ---
+    # --- Email Confirmation ---
 
     # Endpoint: /api/email/request-confirmation/
-    # Método: POST
-    # Ação: Solicita novo email de confirmação.
-    #       Requer auth via Token. Usuário não confirmado.
+    # Method: POST
+    # Action: Requests a new confirmation email.
+    #       Requires auth via Token. User not confirmed.
     path(
         'email/request-confirmation/',
         views.RequestConfirmationEmailView.as_view(),
@@ -57,13 +57,13 @@ urlpatterns = [
         name='validate-confirmation-email',
     ),
 
-    # --- Itens ---
+    # --- Items ---
 
     # Endpoint: /api/items/public/
-    # Métodos: GET, POST
-    # Ação: GET para listar itens públicos.
-    #       POST para criar um novo item (requer autenticação).
-    #       O 'owner' é associado automaticamente ao usuário do token.
+    # Methods: GET, POST
+    # Action: GET to list public items.
+    #       POST to create a new item (requires authentication).
+    #       The 'owner' is automatically associated with the token user.
     path(
         'items/public/',
         views.PublicItemListView.as_view(),

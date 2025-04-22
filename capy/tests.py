@@ -23,8 +23,8 @@ def create_test_user(
         last_name="Test",
         email_confirmed=confirmed
     )
-    # Salva novamente se foi confirmado manualmente para garantir estado
-    # (embora create_user já salve)
+    # Save again if manually confirmed to ensure state
+    # (although create_user already saves)
     if confirmed:
         user.save()
     return user
@@ -50,7 +50,7 @@ class BaseAPITestCase(APITestCase):
         self.client.credentials()
 
 
-# --- Testes de Registro e Login ---
+# --- Registration and Login Tests ---
 class UserRegistrationLoginTests(BaseAPITestCase):
     """ Testes para os endpoints de registro e obtenção de token. """
 
@@ -66,7 +66,7 @@ class UserRegistrationLoginTests(BaseAPITestCase):
             "password": "StrongPassword123",
             "password2": "StrongPassword123",
         }
-        # Usuário existente para testes de duplicação/login
+        # Existing user for duplication/login tests
         self.existing_user = create_test_user(
             'existinguser', 'existing@example.com', 'ExistingPassword123'
         )
@@ -78,9 +78,9 @@ class UserRegistrationLoginTests(BaseAPITestCase):
             self.register_url, self.register_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        # Verifica se a contagem de usuários aumentou em 1
+        # Check if the user count increased by 1
         self.assertEqual(CustomUser.objects.count(), initial_count + 1)
-        # Verifica se o usuário foi criado com os dados corretos
+        # Check if the user was created with the correct data
         user_exists = CustomUser.objects.filter(
             email=self.register_data['email']
         ).exists()
@@ -103,14 +103,14 @@ class UserRegistrationLoginTests(BaseAPITestCase):
             response.status_code, status.HTTP_400_BAD_REQUEST
         )
         self.assertIn('email', response.data)
-        # Nenhum usuário novo
+        # No new user
         self.assertEqual(CustomUser.objects.count(), initial_count)
 
     def test_registration_fail_duplicate_username(self) -> None:
         """ Testa a falha no registro com username duplicado. """
         initial_count = CustomUser.objects.count()
         dup_username_data = self.register_data.copy()
-        # Username existente
+        # Existing username
         dup_username_data['username'] = self.existing_user.username
         response = self.client.post(
             self.register_url, dup_username_data, format='json'
@@ -130,7 +130,7 @@ class UserRegistrationLoginTests(BaseAPITestCase):
             self.register_url, mismatch_data, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        # Erro esperado em password2
+        # Expected error in password2
         self.assertIn('password2', response.data)
         self.assertEqual(CustomUser.objects.count(), initial_count)
 
@@ -168,7 +168,7 @@ class UserRegistrationLoginTests(BaseAPITestCase):
         self.assertIn('non_field_errors', response_user.data)
 
 
-# --- Testes de Perfil e Troca de Senha ---
+# --- Profile and Password Change Tests ---
 class ProfileAPITests(BaseAPITestCase):
     """ Testes para perfil e alteração de senha. """
     user: CustomUser
@@ -218,20 +218,20 @@ class ProfileAPITests(BaseAPITestCase):
         Verifica se um usuário autenticado consegue atualizar com PUT.
         """
         self._authenticate_client(self.token)
-        # Dados para atualização completa:
-        # PUT exige (geralmente) todos os campos editáveis
+        # Data for full update:
+        # PUT usually requires all editable fields
         update_data = {
             'first_name': 'Profile PUT',
             'last_name': 'Test PUT',
             'username': self.user.username,  # <-- Adicionar username atual
-            'email': self.user.email,       # <-- Adicionar email atual
-            # profile_image é opcional, não precisa incluir se não mudar
+            'email': self.user.email,       # <-- Add current email
+            # profile_image is optional, no need to include if not changing
         }
         response = self.client.put(
             self.profile_url, update_data, format='json'
         )
 
-        # O resto das asserções continua igual:
+        # The rest of the assertions remain the same:
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['first_name'], 'Profile PUT')
         self.assertEqual(response.data['last_name'], 'Test PUT')
@@ -266,7 +266,7 @@ class ProfileAPITests(BaseAPITestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(new_password))
 
-        # Verifica login com nova senha
+        # Check login with new password
         token_url = reverse('capy:api_token_auth')
         login_response = self.client.post(
             token_url,
@@ -323,7 +323,7 @@ class ProfileAPITests(BaseAPITestCase):
         )
 
 
-# --- Testes de Itens ---
+# --- Item Tests ---
 class ItemAPITests(BaseAPITestCase):
     """ Testes para os endpoints de Itens. """
     # Type hints
@@ -463,7 +463,7 @@ class ItemAPITests(BaseAPITestCase):
         )
 
 
-# --- Testes de Confirmação de E-mail ---
+# --- Email Confirmation Tests ---
 class EmailConfirmationAPITests(BaseAPITestCase):
     """ Testes para confirmação de e-mail. """
     # Type hints
@@ -522,15 +522,15 @@ class EmailConfirmationAPITests(BaseAPITestCase):
     def test_validate_token_success(self) -> None:
         """ Testa validação bem-sucedida com token correto. """
         self._authenticate_client(self.token_unconfirmed)
-        # 1. Solicita/Gera token
+        # 1. Request/Generate token
         req_resp = self.client.post(self.request_url)
         confirmation_token = req_resp.data['token']
-        # 2. Valida
+        # 2. Validate
         validation_data = {'token': confirmation_token}
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-        # 3. Verifica
+        # 3. Verify
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user_unconfirmed.refresh_from_db()
         self.assertTrue(self.user_unconfirmed.email_confirmed)
@@ -538,7 +538,7 @@ class EmailConfirmationAPITests(BaseAPITestCase):
 
     def test_validate_token_fail_wrong_token(self) -> None:
         """ Testa falha na validação com token errado. """
-        # Garante que usuário tem um token pendente
+        # Ensure user has a pending token
         self.user_unconfirmed.confirmation_token = uuid.uuid4()
         self.user_unconfirmed.token_created_at = timezone.now()
         self.user_unconfirmed.save()
@@ -561,7 +561,7 @@ class EmailConfirmationAPITests(BaseAPITestCase):
         response = self.client.post(
             self.validate_url, validation_data, format='json'
         )
-        # View retorna
+        # View returns
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(
             'confirmado anteriormente', response.data.get('message', '')
@@ -569,7 +569,7 @@ class EmailConfirmationAPITests(BaseAPITestCase):
 
     def test_validate_token_fail_no_pending_token(self) -> None:
         """ Testa falha ao validar sem token pendente. """
-        # Garante que não há token
+        # Ensure there is no token
         self.user_unconfirmed.confirmation_token = None
         self.user_unconfirmed.save()
         self._authenticate_client(self.token_unconfirmed)
